@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-simulator:
+    name: Build for iOS Simulator
     runs-on: macos-latest
     steps:
       - name: Check out repository
@@ -29,3 +30,42 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+  build-device-unsigned:
+    name: Build unsigned package for physical iPhone
+    runs-on: macos-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build for iOS device (unsigned)
+        run: |
+          xcodebuild \
+            -project ios/RideScreenIOS.xcodeproj \
+            -scheme RideScreenIOS \
+            -sdk iphoneos \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/ios-device-build" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="$RUNNER_TEMP/ios-device-build/Build/Products/Debug-iphoneos/RideScreenIOS.app"
+          test -d "$APP_PATH"
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/RideScreenIOS.app"
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/RideScreenIOS-unsigned.ipa"
+          test -f "$RUNNER_TEMP/RideScreenIOS-unsigned.ipa"
+
+      - name: Upload unsigned package
+        uses: actions/upload-artifact@v4
+        with:
+          name: RideScreenIOS-unsigned-IPA
+          path: ${{ runner.temp }}/RideScreenIOS-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
