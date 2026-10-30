@@ -12,10 +12,25 @@ permissions:
 jobs:
   build-simulator:
     name: Build for iOS Simulator
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Install fontTools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/font-check"
+          "$RUNNER_TEMP/font-check/bin/python" -m pip install --upgrade pip fonttools
+
+      - name: Decode and validate Archivo fonts
+        run: |
+          ./scripts/prepare-ios-fonts.sh
+          "$RUNNER_TEMP/font-check/bin/python" scripts/validate-ios-fonts.py
+
+      - name: Select Xcode 16.4
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
 
       - name: Show Xcode version
         run: xcodebuild -version
@@ -28,15 +43,31 @@ jobs:
             -sdk iphonesimulator \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO \
             build
 
   build-device-unsigned:
     name: Build unsigned package for physical iPhone
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Install fontTools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/font-check"
+          "$RUNNER_TEMP/font-check/bin/python" -m pip install --upgrade pip fonttools
+
+      - name: Decode and validate Archivo fonts
+        run: |
+          ./scripts/prepare-ios-fonts.sh
+          "$RUNNER_TEMP/font-check/bin/python" scripts/validate-ios-fonts.py
+
+      - name: Select Xcode 16.4
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
 
       - name: Show Xcode version
         run: xcodebuild -version
@@ -47,25 +78,26 @@ jobs:
             -project ios/RideScreenIOS.xcodeproj \
             -scheme RideScreenIOS \
             -sdk iphoneos \
-            -configuration Debug \
+            -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/ios-device-build" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             CODE_SIGNING_ALLOWED=NO \
             build
 
       - name: Package unsigned IPA
         run: |
-          APP_PATH="$RUNNER_TEMP/ios-device-build/Build/Products/Debug-iphoneos/RideScreenIOS.app"
+          APP_PATH="$RUNNER_TEMP/ios-device-build/Build/Products/Release-iphoneos/RideScreenIOS.app"
           test -d "$APP_PATH"
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/RideScreenIOS.app"
-          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/RideScreenIOS-unsigned.ipa"
-          test -f "$RUNNER_TEMP/RideScreenIOS-unsigned.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned.ipa"
+          test -f "$RUNNER_TEMP/RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned.ipa"
 
       - name: Upload unsigned package
         uses: actions/upload-artifact@v4
         with:
-          name: RideScreenIOS-unsigned-IPA
-          path: ${{ runner.temp }}/RideScreenIOS-unsigned.ipa
+          name: RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned-IPA
+          path: ${{ runner.temp }}/RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned.ipa
           if-no-files-found: error
           retention-days: 7

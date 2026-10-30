@@ -1,35 +1,58 @@
 # RideScreen iOS
 
-An independent iOS companion project for RideScreen AA, focused on recording rides and adding telemetry overlays to video.
+Proyecto complementario de RideScreen AA para iPhone. Esta primera versión es un teaser visual de la identidad RideScreen, no una app funcional de registro de rutas.
 
-## Project status
+## Estado
 
-**Early scaffold. Not tested on a real device.** This repository currently establishes the project structure and a cloud build workflow. Trip recording, location tracking, video import, telemetry synchronization, and overlays are not implemented yet.
+La pantalla de bienvenida se ha instalado y abierto en un iPhone XS. La verificación manual se limitó a esa pantalla; todavía no hay funciones de grabación ni telemetría.
 
-## Goals
+Aún no están implementados:
+- Grabación de rutas ni seguimiento de ubicación.
+- Importación de vídeos.
+- Sincronización de telemetría y superposición sobre vídeo.
 
-- Record a ride route, elapsed time, distance, and location-derived speed.
-- Import videos recorded on an iPhone or compatible action camera.
-- Synchronize available trip telemetry with video and render an overlay.
-- Keep the iOS app independent from the Android projection functionality.
+## Compilación con GitHub Actions
 
-## Build
+El workflow [`.github/workflows/ios-build.yml`](.github/workflows/ios-build.yml) usa `macos-15` y Xcode 16.4 y ejecuta dos trabajos:
 
-The GitHub Actions workflow in `.github/workflows/ios-build.yml` runs two jobs on a macOS runner:
+- **Simulador:** compila la app para iOS Simulator en Debug.
+- **IPA de dispositivo:** compila en Release sin firma y empaqueta `Payload/RideScreenIOS.app` dentro de un IPA.
 
-- **iOS Simulator build:** checks that the current SwiftUI project compiles for the simulator.
-- **Unsigned device package:** compiles for iOS devices and uploads `RideScreenIOS-unsigned-IPA` as a temporary workflow artifact.
+Cada ejecución usa `github.run_number` como `CURRENT_PROJECT_VERSION`. El artefacto se nombra `RideScreenIOS-v0.1.0-build-<número>-unsigned-IPA` y se conserva durante 7 días. El IPA es **sin firmar**: no se puede instalar directamente como una app firmada y distribuible.
 
-The device artifact is **unsigned and cannot be installed directly**. It is a build/package check and a starting point for a future signing workflow, not an installable release. Artifacts are retained for 7 days.
+Para compilar localmente, abre `ios/RideScreenIOS.xcodeproj` con Xcode en macOS. El target incluye una fase de preparación que decodifica las fuentes Archivo desde Base64 antes de compilar.
 
-## Installation and signing
+## Fuentes Archivo
 
-Device installation, signing, and distribution are not configured yet. Apple's free Personal Team signing requires Xcode and provisioning must be renewed periodically. Do not add Apple signing certificates, private keys, provisioning profiles, or account credentials to the repository.
+Los archivos fuente están en `tools/ios-fonts/`:
+- `Archivo-Regular.ttf.b64`
+- `Archivo-Medium.ttf.b64`
+- `Archivo-SemiBold.ttf.b64`
+- `Archivo-ExtraBold.ttf.b64`
+- `ArchivoBlack-Regular.ttf.b64`
 
-## License
+Se guardan en Base64 para mantener los ficheros binarios de fuente representables como texto en Git y hacer explícito el proceso de reconstrucción. `scripts/prepare-ios-fonts.sh` usa únicamente Python estándar para decodificarlos en `ios/RideScreenIOS/Fonts/`. Los nombres PostScript, pesos y registros `UIAppFonts` se comprueban en CI mediante `scripts/validate-ios-fonts.py` y fontTools.
 
-This project is licensed under **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**. See [LICENSE](LICENSE).
+Las cuatro variantes Archivo usan nombres PostScript únicos. El código SwiftUI usa esos nombres exactos en `Font.custom`; Archivo Black conserva `ArchivoBlack-Regular`.
 
-## Contributions
+## Icono de la app
 
-The project is in its initial scaffold phase. Features and supported devices will be documented as they are implemented and tested.
+El SVG de diseño es `design/icon.svg`. El icono compilable ya generado está versionado en `ios/RideScreenIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png` como PNG opaco RGB de 1024 × 1024.
+
+Si cambias el SVG, ejecuta manualmente:
+
+```sh
+./scripts/generate-app-icon.sh
+```
+
+El script requiere `rsvg-convert` (librsvg) y Python con Pillow instalados previamente. No instala dependencias y no se ejecuta durante la compilación de Xcode. Revisa el resultado y versiona el PNG regenerado.
+
+## Instalación
+
+TODO: completar las instrucciones de instalación y firma.
+
+No se deben añadir al repositorio certificados de firma, claves privadas, perfiles de aprovisionamiento, credenciales ni secretos de Apple.
+
+## Licencia
+
+GNU Affero General Public License v3.0 o posterior (**AGPL-3.0-or-later**). Consulta [`LICENSE`](LICENSE).

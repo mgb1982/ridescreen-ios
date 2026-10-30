@@ -10,5 +10,9 @@
         <string>Archivo-ExtraBold.ttf</string>
         <string>ArchivoBlack-Regular.ttf</string>
     </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
 </dict>
 </plist>
