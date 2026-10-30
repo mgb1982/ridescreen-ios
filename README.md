@@ -1,91 +1,58 @@
 # RideScreen iOS
 
-Aplicación iOS complementaria de RideScreen, escrita en SwiftUI. El proyecto se distribuye bajo **AGPL-3.0-or-later**.
+Proyecto complementario de RideScreen AA para iPhone. Esta primera versión es un teaser visual de la identidad RideScreen, no una app funcional de registro de rutas.
 
-> **Estado actual:** prototipo de bienvenida/preview. La app se ha instalado y abierto en un iPhone XS; por ahora solo muestra la pantalla de presentación. No implementa todavía grabación de rutas, ubicación, importación de vídeo, superposición de telemetría ni otras funciones de RideScreen AA.
+## Estado
 
-## Estado y alcance
+La pantalla de bienvenida se ha instalado y abierto en un iPhone XS. La verificación manual se limitó a esa pantalla; todavía no hay funciones de grabación ni telemetría.
 
-- Plataforma objetivo: iPhone, orientación vertical.
-- Bundle identifier: `com.mgb1982.RideScreenIOS`.
-- Versión de marketing: `0.1.0`.
-- La pantalla usa el sistema visual RideScreen y la familia tipográfica Archivo.
-- El proyecto conserva la configuración de launch screen de Xcode para iniciar a pantalla completa.
-- No se incluyen certificados, perfiles de aprovisionamiento, claves, cuentas de Apple ni secretos.
+Aún no están implementados:
+- Grabación de rutas ni seguimiento de ubicación.
+- Importación de vídeos.
+- Sincronización de telemetría y superposición sobre vídeo.
 
-## Compilación
+## Compilación con GitHub Actions
 
-La compilación CI se ejecuta en GitHub Actions sobre `macos-15` y selecciona explícitamente Pinned Xcode. Consulta [ios-build.yml](.github/workflows/ios-build.yml) para ver la versión fijada.
+El workflow [`.github/workflows/ios-build.yml`](.github/workflows/ios-build.yml) usa `macos-15` y Xcode 16.4 y ejecuta dos trabajos:
 
-El workflow produce dos comprobaciones:
+- **Simulador:** compila la app para iOS Simulator en Debug.
+- **IPA de dispositivo:** compila en Release sin firma y empaqueta `Payload/RideScreenIOS.app` dentro de un IPA.
 
-1. **iOS Simulator:** compilación Debug sin firma.
-2. **Dispositivo físico:** compilación Release sin firma, empaquetada como IPA.
+Cada ejecución usa `github.run_number` como `CURRENT_PROJECT_VERSION`. El artefacto se nombra `RideScreenIOS-v0.1.0-build-<número>-unsigned-IPA` y se conserva durante 7 días. El IPA es **sin firmar**: no se puede instalar directamente como una app firmada y distribuible.
 
-El número de ejecución de GitHub Actions se pasa como `CURRENT_PROJECT_VERSION`, por lo que cada IPA tiene un número de build distinto. El artefacto se publica con un nombre de la forma:
-
-`RideScreenIOS-v0.1.0-build-N-unsigned-IPA`
-
-El IPA es **unsigned**. El workflow no firma la app ni crea certificados o perfiles de aprovisionamiento.
-
-Para compilar manualmente desde un Mac con Xcode seleccionado y las dependencias indicadas más abajo:
-
-```bash
-./scripts/prepare-ios-fonts.sh
-
-xcodebuild \
-  -project ios/RideScreenIOS.xcodeproj \
-  -scheme RideScreenIOS \
-  -sdk iphonesimulator \
-  -configuration Debug \
-  -destination 'generic/platform=iOS Simulator' \
-  CODE_SIGNING_ALLOWED=NO \
-  build
-```
-
-La fase de preparación del target ejecuta únicamente `scripts/prepare-ios-fonts.sh`: decodifica los archivos TTF desde Base64 con Python estándar. No instala herramientas ni genera recursos gráficos.
+Para compilar localmente, abre `ios/RideScreenIOS.xcodeproj` con Xcode en macOS. El target incluye una fase de preparación que decodifica las fuentes Archivo desde Base64 antes de compilar.
 
 ## Fuentes Archivo
 
-Los cinco archivos de fuente de entrada están en `tools/ios-fonts/`:
-
+Los archivos fuente están en `tools/ios-fonts/`:
 - `Archivo-Regular.ttf.b64`
 - `Archivo-Medium.ttf.b64`
 - `Archivo-SemiBold.ttf.b64`
 - `Archivo-ExtraBold.ttf.b64`
 - `ArchivoBlack-Regular.ttf.b64`
 
-Se almacenan en Base64 para mantener los TTF como recursos de texto portables y reproducibles dentro del repositorio. Antes de compilar, CI usa **fontTools** para normalizar los metadatos de Archivo, decodifica los TTF a `ios/RideScreenIOS/Fonts/` y valida sus nombres PostScript. También comprueba que `UIAppFonts` y los nombres usados por `Font.custom` coincidan.
+Se guardan en Base64 para mantener los ficheros binarios de fuente representables como texto en Git y hacer explícito el proceso de reconstrucción. `scripts/prepare-ios-fonts.sh` usa únicamente Python estándar para decodificarlos en `ios/RideScreenIOS/Fonts/`. Los nombres PostScript, pesos y registros `UIAppFonts` se comprueban en CI mediante `scripts/validate-ios-fonts.py` y fontTools.
 
-Los cuatro pesos de Archivo tienen nombres PostScript distintos. `ArchivoBlack-Regular` se conserva sin modificar. La licencia OFL de las fuentes se encuentra junto a los recursos en `ios/RideScreenIOS/Fonts/OFL-Archivo.txt`.
+Las cuatro variantes Archivo usan nombres PostScript únicos. El código SwiftUI usa esos nombres exactos en `Font.custom`; Archivo Black conserva `ArchivoBlack-Regular`.
 
-Scripts relacionados:
+## Icono de la app
 
-- `scripts/repair-archivo-fonts.py`: normaliza los nombres y pesos usando fontTools.
-- `scripts/prepare-ios-fonts.sh`: decodifica Base64 a TTF usando únicamente Python estándar.
-- `scripts/validate-ios-fonts.py`: valida los cinco nombres PostScript y su correspondencia con Info.plist y SwiftUI.
+El SVG de diseño es `design/icon.svg`. El icono compilable ya generado está versionado en `ios/RideScreenIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png` como PNG opaco RGB de 1024 × 1024.
 
-## Icono de la aplicación
+Si cambias el SVG, ejecuta manualmente:
 
-El recurso vectorial fuente está en `design/icon.svg`. Cuando se modifique ese SVG, regenera el icono de iOS y confirma el PNG resultante en el repositorio:
-
-```bash
-brew install librsvg
-python3 -m pip install Pillow
+```sh
 ./scripts/generate-app-icon.sh
-git add ios/RideScreenIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
 ```
 
-El generador crea un PNG opaco RGB de 1024 × 1024, sin canal alfa. La generación se mantiene separada de la fase de compilación de Xcode; CI ejecuta el script como paso previo para validar y compilar el recurso derivado.
-
-## Localización
-
-La pantalla inicial usa el String Catalog `ios/RideScreenIOS/Localizable.xcstrings`, con español como idioma base y traducciones para catalán e inglés. La estructura queda preparada para añadir otros idiomas posteriormente.
+El script requiere `rsvg-convert` (librsvg) y Python con Pillow instalados previamente. No instala dependencias y no se ejecuta durante la compilación de Xcode. Revisa el resultado y versiona el PNG regenerado.
 
 ## Instalación
 
-TODO: documentar aquí el procedimiento de instalación que decida el mantenedor.
+TODO: completar las instrucciones de instalación y firma.
+
+No se deben añadir al repositorio certificados de firma, claves privadas, perfiles de aprovisionamiento, credenciales ni secretos de Apple.
 
 ## Licencia
 
-AGPL-3.0-or-later. Consulta [LICENSE](LICENSE).
+GNU Affero General Public License v3.0 o posterior (**AGPL-3.0-or-later**). Consulta [`LICENSE`](LICENSE).
