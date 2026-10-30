@@ -3,102 +3,103 @@ import SwiftUI
 private enum RideBrand {
     static let background = Color(hex: 0x1A231D)
     static let surface = Color(hex: 0x243028)
-    static let surfaceHigh = Color(hex: 0x2D3B31)
     static let outline = Color(hex: 0x3D4F42)
     static let gold = Color(hex: 0xD1A955)
     static let text = Color(hex: 0xF1F4EC)
     static let secondary = Color(hex: 0xAEBAAA)
 }
+private enum RideFont {
+    static func regular(_ size: CGFloat) -> Font { .custom("Archivo-Regular", size: size) }
+    static func bold(_ size: CGFloat) -> Font { .custom("Archivo-ExtraBold", size: size) }
+    static func black(_ size: CGFloat) -> Font { .custom("ArchivoBlack-Regular", size: size) }
+}
 
 @main
 struct RideScreenIOSApp: App {
     var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
+        WindowGroup { ContentView() }
     }
 }
 
 struct ContentView: View {
     var body: some View {
-        ZStack {
-            RideBrand.background.ignoresSafeArea()
+        GeometryReader { geometry in
+            ZStack {
+                RadialGradient(
+                    colors: [Color(hex: 0x2A3A30), RideBrand.background],
+                    center: UnitPoint(x: 0.2, y: 0),
+                    startRadius: 0,
+                    endRadius: max(geometry.size.width * 1.2, geometry.size.height * 0.6)
+                )
+                .ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 0) {
                     header
-                    hero
-                    featuresHeading
-                    featureCards
-                    comingSoonCard
+                    hero.padding(.top, 26)
+                    featureSection.padding(.top, 28)
+                    Spacer(minLength: 0)
                     footer
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 10)
-                .padding(.bottom, 30)
-                .frame(maxWidth: 560)
-                .frame(maxWidth: .infinity)
+                .padding(.top, 58)
+                .padding(.bottom, 34)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .ignoresSafeArea()
         .preferredColorScheme(.dark)
     }
 
     private var header: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: 10) {
             Image("RideScreenMark")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 46, height: 46)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(RideBrand.outline, lineWidth: 1)
-                }
+                .frame(width: 40, height: 40)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
-                    Text("RIDE")
-                        .foregroundStyle(RideBrand.text)
-                    Text("SCREEN")
-                        .foregroundStyle(RideBrand.gold)
+                    Text("Ride").foregroundStyle(RideBrand.text)
+                    Text("Screen").foregroundStyle(RideBrand.gold)
                 }
-                .font(.custom("AvenirNextCondensed-Heavy", size: 25))
-                .tracking(-0.45)
+                .font(RideFont.black(24))
+                .tracking(0.2)
+                .lineLimit(1)
 
                 Text("iOS EDITION")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .tracking(2.1)
+                    .font(RideFont.bold(10.5))
+                    .tracking(2.2)
                     .foregroundStyle(RideBrand.secondary)
             }
 
             Spacer(minLength: 8)
 
             HStack(spacing: 6) {
-                Circle()
-                    .fill(RideBrand.gold)
-                    .frame(width: 6, height: 6)
+                Circle().fill(RideBrand.gold).frame(width: 6, height: 6)
                 Text("PREVIEW")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .tracking(1.1)
+                    .font(RideFont.bold(10.5))
+                    .tracking(1.6)
                     .foregroundStyle(RideBrand.gold)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(RideBrand.surfaceHigh, in: Capsule())
-            .overlay(Capsule().stroke(RideBrand.outline, lineWidth: 1))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .overlay { Capsule().stroke(RideBrand.outline, lineWidth: 1.5) }
         }
+        .frame(height: 40)
     }
 
     private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoundedRectangle(cornerRadius: 25, style: .continuous)
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(hex: 0x34463A),
-                            RideBrand.surface,
-                            Color(hex: 0x172019)
+                        stops: [
+                            .init(color: Color(hex: 0x30423A), location: 0),
+                            .init(color: Color(hex: 0x1C261F), location: 0.7)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -106,236 +107,182 @@ struct ContentView: View {
                 )
 
             RideRouteArtwork()
-                .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
+                .frame(width: 190, height: 230)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .offset(x: 6, y: 4)
 
-            LinearGradient(
-                colors: [RideBrand.background.opacity(0.04), RideBrand.background.opacity(0.18), RideBrand.background.opacity(0.82)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 25, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text("EL SIGUIENTE CAPÍTULO")
-                    .font(.system(size: 9, weight: .heavy, design: .rounded))
-                    .tracking(2.0)
+                    .font(RideFont.bold(11))
+                    .tracking(2.4)
                     .foregroundStyle(RideBrand.gold)
-
-                Spacer(minLength: 8)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 Text("Tus rutas.\nTus historias.")
-                    .font(.custom("AvenirNextCondensed-Heavy", size: 39))
+                    .font(RideFont.black(39))
                     .lineSpacing(-4)
                     .foregroundStyle(RideBrand.text)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 56)
 
                 Text("RideScreen llega a iPhone.")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(RideFont.regular(16))
                     .foregroundStyle(RideBrand.secondary)
+                    .padding(.top, 14)
 
-                HStack(spacing: 7) {
-                    Image(systemName: "hammer.fill")
-                        .font(.system(size: 9, weight: .bold))
-                    Text("EN DESARROLLO")
-                        .font(.system(size: 9, weight: .heavy, design: .rounded))
-                        .tracking(1.35)
-                }
-                .foregroundStyle(RideBrand.background)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(RideBrand.gold, in: Capsule())
-                .padding(.top, 3)
+                Spacer(minLength: 0)
             }
-            .padding(20)
+            .padding(.horizontal, 22)
+            .padding(.top, 24)
+            .padding(.bottom, 22)
+
+            HStack(spacing: 7) {
+                Text("🛠️").font(.system(size: 12))
+                Text("EN DESARROLLO")
+                    .font(RideFont.bold(11))
+                    .tracking(1.8)
+                    .foregroundStyle(Color(hex: 0x18211A))
+            }
+            .padding(.horizontal, 15)
+            .padding(.vertical, 9)
+            .background(RideBrand.gold, in: Capsule())
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(.leading, 22)
+            .padding(.bottom, 22)
         }
-        .frame(height: 238)
+        .frame(height: 318)
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 25, style: .continuous)
-                .stroke(RideBrand.outline.opacity(0.9), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(RideBrand.outline, lineWidth: 1.5)
         }
     }
 
-    private var featuresHeading: some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private var featureSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text("DISEÑADO PARA CADA KILÓMETRO")
-                .font(.system(size: 9, weight: .heavy, design: .rounded))
-                .tracking(1.8)
+                .font(RideFont.bold(11))
+                .tracking(2.4)
                 .foregroundStyle(RideBrand.gold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             Text("Lo que estamos preparando")
-                .font(.custom("AvenirNextCondensed-Heavy", size: 25))
+                .font(RideFont.black(24))
                 .foregroundStyle(RideBrand.text)
-        }
-        .padding(.top, 1)
-    }
+                .padding(.top, 8)
 
-    private var featureCards: some View {
-        HStack(alignment: .top, spacing: 9) {
-            featureCard(
-                icon: "point.topleft.down.curvedto.point.bottomright.up",
-                title: "RUTAS",
-                detail: "Graba cada salida"
-            )
-            featureCard(
-                icon: "speedometer",
-                title: "DATOS",
-                detail: "Velocidad y recorrido"
-            )
-            featureCard(
-                icon: "video.fill",
-                title: "VÍDEO",
-                detail: "Telemetría sobre tus clips"
-            )
-        }
-    }
-
-    private func featureCard(icon: String, title: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Image(systemName: icon)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(RideBrand.gold)
-                .frame(width: 35, height: 35)
-                .background(RideBrand.gold.opacity(0.13), in: Circle())
-
-            Text(title)
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .tracking(1.1)
-                .foregroundStyle(RideBrand.text)
-
-            Text(detail)
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(RideBrand.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .frame(minHeight: 112, alignment: .topLeading)
-        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .stroke(RideBrand.outline, lineWidth: 1)
-        }
-    }
-
-    private var comingSoonCard: some View {
-        HStack(spacing: 13) {
-            Image("RideScreenMark")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 53, height: 53)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("RIDESCREEN iOS")
-                    .font(.custom("AvenirNextCondensed-Heavy", size: 22))
-                    .tracking(0.2)
-                    .foregroundStyle(RideBrand.text)
-
-                Text("Mismo espíritu. Nuevos horizontes.")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(RideBrand.secondary)
-
-                Text("PRÓXIMAMENTE")
-                    .font(.system(size: 9, weight: .heavy, design: .rounded))
-                    .tracking(1.7)
-                    .foregroundStyle(RideBrand.gold)
-                    .padding(.top, 3)
+            HStack(alignment: .top, spacing: 9) {
+                featureCard(kind: .route, title: "RUTAS", detail: "Graba cada salida en segundo plano")
+                featureCard(kind: .data, title: "DATOS", detail: "Velocidad, distancia y recorrido")
+                featureCard(kind: .video, title: "VÍDEO", detail: "Telemetría sobre tus clips")
             }
-
-            Spacer(minLength: 0)
+            .padding(.top, 14)
         }
-        .padding(15)
-        .background(
-            LinearGradient(
-                colors: [RideBrand.surfaceHigh, RideBrand.surface],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 19, style: .continuous)
-        )
+    }
+
+    private func featureCard(kind: FeatureLineIcon.Kind, title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            FeatureLineIcon(kind: kind)
+            Text(title)
+                .font(RideFont.bold(13))
+                .tracking(1.2)
+                .foregroundStyle(RideBrand.text)
+                .padding(.top, 10)
+            Text(detail)
+                .font(RideFont.regular(11.5))
+                .lineSpacing(1.2)
+                .foregroundStyle(RideBrand.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 7)
+        }
+        .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+        .padding(.horizontal, 11)
+        .padding(.top, 14)
+        .padding(.bottom, 13)
+        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 19, style: .continuous)
-                .stroke(RideBrand.outline, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(RideBrand.outline, lineWidth: 1.5)
         }
     }
 
     private var footer: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 8) {
             Image(systemName: "info.circle")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(RideBrand.gold)
-
-            Text("Proyecto en desarrollo. Las funciones pueden cambiar.")
-                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .font(.system(size: 13))
                 .foregroundStyle(RideBrand.secondary)
+            Text("Proyecto en desarrollo. Las funciones pueden cambiar.")
+                .font(RideFont.regular(11.5))
+                .foregroundStyle(RideBrand.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.top, 1)
+        .frame(maxWidth: .infinity)
     }
 }
 
 private struct RideRouteArtwork: View {
     var body: some View {
         GeometryReader { geometry in
-            let size = geometry.size
-
             ZStack {
-                Path { path in
-                    path.move(to: CGPoint(x: 0, y: size.height * 0.69))
-                    path.addCurve(
-                        to: CGPoint(x: size.width, y: size.height * 0.54),
-                        control1: CGPoint(x: size.width * 0.28, y: size.height * 0.43),
-                        control2: CGPoint(x: size.width * 0.61, y: size.height * 0.82)
-                    )
-                    path.addLine(to: CGPoint(x: size.width, y: size.height))
-                    path.addLine(to: CGPoint(x: 0, y: size.height))
-                    path.closeSubpath()
-                }
-                .fill(Color(hex: 0x202D24).opacity(0.95))
-
-                Path { path in
-                    path.move(to: CGPoint(x: size.width * 0.60, y: size.height * 1.08))
-                    path.addCurve(
-                        to: CGPoint(x: size.width * 1.10, y: size.height * 0.32),
-                        control1: CGPoint(x: size.width * 0.48, y: size.height * 0.76),
-                        control2: CGPoint(x: size.width * 0.91, y: size.height * 0.77)
-                    )
-                }
-                .stroke(Color.black.opacity(0.42), style: StrokeStyle(lineWidth: 31, lineCap: .round))
-
-                Path { path in
-                    path.move(to: CGPoint(x: size.width * 0.60, y: size.height * 1.08))
-                    path.addCurve(
-                        to: CGPoint(x: size.width * 1.10, y: size.height * 0.32),
-                        control1: CGPoint(x: size.width * 0.48, y: size.height * 0.76),
-                        control2: CGPoint(x: size.width * 0.91, y: size.height * 0.77)
-                    )
-                }
-                .stroke(RideBrand.secondary.opacity(0.55), style: StrokeStyle(lineWidth: 1.2, lineCap: .round, dash: [5, 7]))
-
-                Path { path in
-                    path.move(to: CGPoint(x: size.width * 0.60, y: size.height * 1.08))
-                    path.addCurve(
-                        to: CGPoint(x: size.width * 1.10, y: size.height * 0.32),
-                        control1: CGPoint(x: size.width * 0.48, y: size.height * 0.76),
-                        control2: CGPoint(x: size.width * 0.91, y: size.height * 0.77)
-                    )
-                }
-                .stroke(RideBrand.gold.opacity(0.9), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [3, 9]))
-
-                Circle()
-                    .fill(RideBrand.gold)
-                    .frame(width: 7, height: 7)
-                    .position(x: size.width * 0.81, y: size.height * 0.57)
-
-                Circle()
-                    .stroke(RideBrand.gold.opacity(0.7), lineWidth: 1)
-                    .frame(width: 17, height: 17)
-                    .position(x: size.width * 0.81, y: size.height * 0.57)
+                routePath(in: geometry.size)
+                    .stroke(Color(hex: 0x0F1511), style: StrokeStyle(lineWidth: 34, lineCap: .round, lineJoin: .round))
+                routePath(in: geometry.size)
+                    .stroke(RideBrand.gold, style: StrokeStyle(lineWidth: 2.4, lineCap: .round, dash: [7, 9]))
             }
         }
+        .accessibilityHidden(true)
+    }
+
+    private func routePath(in size: CGSize) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: size.width + 10, y: -10))
+        path.addCurve(
+            to: CGPoint(x: size.width * 0.55, y: size.height * 0.68),
+            control1: CGPoint(x: size.width * 0.75, y: size.height * 0.27),
+            control2: CGPoint(x: size.width * 0.8, y: size.height * 0.48)
+        )
+        path.addCurve(
+            to: CGPoint(x: size.width * 0.1, y: size.height + 10),
+            control1: CGPoint(x: size.width * 0.3, y: size.height * 0.83),
+            control2: CGPoint(x: size.width * 0.2, y: size.height * 0.91)
+        )
+        return path
+    }
+}
+
+private struct FeatureLineIcon: View {
+    enum Kind { case route, data, video }
+    let kind: Kind
+
+    var body: some View {
+        Canvas { context, _ in
+            var path = Path()
+            switch kind {
+            case .route:
+                path.move(to: CGPoint(x: 6, y: 19))
+                path.addCurve(to: CGPoint(x: 18, y: 19), control1: CGPoint(x: 9, y: 19), control2: CGPoint(x: 9, y: 14))
+                path.addCurve(to: CGPoint(x: 18, y: 7), control1: CGPoint(x: 18, y: 11), control2: CGPoint(x: 12, y: 10))
+                path.addEllipse(in: CGRect(x: 4, y: 17, width: 4, height: 4))
+                path.addEllipse(in: CGRect(x: 16, y: 3, width: 4, height: 4))
+            case .data:
+                path.move(to: CGPoint(x: 4, y: 16))
+                path.addCurve(to: CGPoint(x: 20, y: 16), control1: CGPoint(x: 4, y: 5), control2: CGPoint(x: 20, y: 5))
+                path.move(to: CGPoint(x: 12, y: 16))
+                path.addLine(to: CGPoint(x: 16, y: 10))
+                path.addEllipse(in: CGRect(x: 10.6, y: 14.6, width: 2.8, height: 2.8))
+            case .video:
+                path.addRoundedRect(in: CGRect(x: 3, y: 6, width: 13, height: 12), cornerSize: CGSize(width: 2.5, height: 2.5))
+                path.move(to: CGPoint(x: 16, y: 10.5))
+                path.addLine(to: CGPoint(x: 21, y: 7.5))
+                path.addLine(to: CGPoint(x: 21, y: 16.5))
+                path.closeSubpath()
+            }
+            context.stroke(path, with: .color(RideBrand.gold), style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: 24, height: 24)
         .accessibilityHidden(true)
     }
 }

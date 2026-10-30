@@ -23,3 +23,6 @@ xcuserdata/
 *.cer
 .env
 .env.*
+
+# Archivo font files generated from tools/ios-fonts/*.ttf.b64 before building
+ios/RideScreenIOS/Fonts/*.ttf

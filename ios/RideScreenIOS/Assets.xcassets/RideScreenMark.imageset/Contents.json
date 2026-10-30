@@ -1,12 +1,5 @@
 {
-  "images" : [
-    {
-      "filename" : "RideScreenMark.png",
-      "idiom" : "universal"
-    }
-  ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
-  }
+  "images" : [ { "filename" : "RideScreenMark.svg", "idiom" : "universal" } ],
+  "info" : { "author" : "xcode", "version" : 1 },
+  "properties" : { "preserves-vector-representation" : true }
 }
