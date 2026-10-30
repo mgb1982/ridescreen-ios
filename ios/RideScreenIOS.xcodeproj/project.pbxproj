@@ -185,6 +185,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				MARKETING_VERSION = 0.1.0;
 				INFOPLIST_FILE = RideScreenIOS/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RideScreen;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -204,6 +206,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				MARKETING_VERSION = 0.1.0;
 				INFOPLIST_FILE = RideScreenIOS/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = RideScreen;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
