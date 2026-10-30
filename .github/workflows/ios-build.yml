@@ -22,7 +22,6 @@ jobs:
 
       - name: Repair, decode and validate Archivo fonts
         run: |
-          python3 scripts/repair-archivo-fonts.py
           ./scripts/prepare-ios-fonts.sh
           python3 scripts/validate-ios-fonts.py
 
@@ -53,7 +52,6 @@ jobs:
 
       - name: Repair, decode and validate Archivo fonts
         run: |
-          python3 scripts/repair-archivo-fonts.py
           ./scripts/prepare-ios-fonts.sh
           python3 scripts/validate-ios-fonts.py
 
