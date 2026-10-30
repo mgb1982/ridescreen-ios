@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_DIR="$ROOT_DIR/tools/ios-fonts"
 DEST_DIR="$ROOT_DIR/ios/RideScreenIOS/Fonts"
 APP_ICON="$ROOT_DIR/ios/RideScreenIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
-TEMP_SVG="$(mktemp -t ridescreen-app-icon).svg"
-trap 'rm -f "$TEMP_SVG"' EXIT
+TEMP_DIR="$(mktemp -d -t ridescreen-app-icon)"
+TEMP_SVG="$TEMP_DIR/icon.svg"
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 mkdir -p "$DEST_DIR"
 
@@ -24,15 +25,15 @@ if not fonts:
 
 for encoded_path in fonts:
     payload = base64.b64decode(encoded_path.read_bytes(), validate=False)
-    if not payload.startswith(b"\\x00\\x01\\x00\\x00"):
+    if payload[:4] != bytes.fromhex("00010000"):
         raise SystemExit(f"Invalid TrueType data: {encoded_path.name}")
     output = destination / encoded_path.name[:-4]
     output.write_bytes(payload)
     print(f"Prepared {output.name} ({len(payload)} bytes)")
 PY
 
-# The app icon must be a full-size, opaque RGB PNG. Render the approved SVG
-# using librsvg, then flatten it to RGB so actool accepts it as an AppIcon.
+# The AppIcon must be an opaque, full-size RGB PNG. Render the approved
+# SVG with librsvg, then flatten it to RGB for Apple's asset compiler.
 if ! command -v rsvg-convert >/dev/null 2>&1; then
     brew install librsvg
 fi
@@ -46,19 +47,18 @@ import sys
 from pathlib import Path
 
 source = Path(sys.argv[1]).read_text(encoding="utf-8")
-# Fill the square outside the logo's circular crop and enlarge the emblem.
 source = source.replace(
     '<g clip-path="url(#c)">',
     '<rect x="18" y="18" width="72" height="72" fill="#1A231D"/><g clip-path="url(#c)">',
     1,
 )
 source = source.replace("scale(0.8 0.8)", "scale(1 1)", 1)
-if "<rect x=" not in source or "scale(1 1)" not in source:
-    raise SystemExit("Could not prepare the SVG app icon from design/icon.svg")
+if source == Path(sys.argv[1]).read_text(encoding="utf-8"):
+    raise SystemExit("Could not prepare the larger square app icon from design/icon.svg")
 Path(sys.argv[2]).write_text(source, encoding="utf-8")
 PY
 
-rsvg-convert --width 1024 --height 1024 "$TEMP_SVG" > "$APP_ICON"
+rsvg-convert -w 1024 -h 1024 "$TEMP_SVG" > "$APP_ICON"
 
 python3 - "$APP_ICON" <<'PY'
 import sys
