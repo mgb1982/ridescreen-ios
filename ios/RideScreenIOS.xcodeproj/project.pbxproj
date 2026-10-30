@@ -84,7 +84,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000000000000000000009 /* Build configuration list for PBXNativeTarget "RideScreenIOS" */;
 			buildPhases = (
-				A10000000000000000000022 /* Prepare Archivo fonts and app icon */,
+				A10000000000000000000022 /* Prepare Archivo fonts */,
 				A1000000000000000000000A /* Sources */,
 				A10000000000000000000004 /* Frameworks */,
 				A1000000000000000000000B /* Resources */,
@@ -126,12 +126,12 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		A10000000000000000000022 /* Prepare Archivo fonts and app icon */ = {
+		A10000000000000000000022 /* Prepare Archivo fonts */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = ();
 			inputPaths = ();
-			name = "Prepare Archivo fonts and app icon";
+			name = "Prepare Archivo fonts";
 			outputPaths = ();
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
