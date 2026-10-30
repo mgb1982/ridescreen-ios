@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C10000000000000000000002 /* TripLocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000001 /* TripLocationService.swift */; };
+		C10000000000000000000004 /* TripDiagnosticsLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TripDiagnosticsLogger.swift */; };
+		C10000000000000000000006 /* TripRecordingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C10000000000000000000005 /* TripRecordingViewModel.swift */; };
 		B10000000000000000000002 /* TripModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* TripModels.swift */; };
 		B10000000000000000000004 /* TripTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* TripTracker.swift */; };
 		B10000000000000000000006 /* TripJournalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* TripJournalStore.swift */; };
@@ -28,6 +31,9 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		C10000000000000000000001 /* TripLocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripLocationService.swift; sourceTree = "<group>"; };
+		C10000000000000000000003 /* TripDiagnosticsLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripDiagnosticsLogger.swift; sourceTree = "<group>"; };
+		C10000000000000000000005 /* TripRecordingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripRecordingViewModel.swift; sourceTree = "<group>"; };
 		B10000000000000000000001 /* TripModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripModels.swift; sourceTree = "<group>"; };
 		B10000000000000000000003 /* TripTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripTracker.swift; sourceTree = "<group>"; };
 		B10000000000000000000005 /* TripJournalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripJournalStore.swift; sourceTree = "<group>"; };
@@ -56,6 +62,24 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C10000000000000000000020 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000001 /* TripLocationService.swift */,
+				C10000000000000000000003 /* TripDiagnosticsLogger.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		C10000000000000000000021 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C10000000000000000000005 /* TripRecordingViewModel.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+
 		B10000000000000000000020 /* Trips */ = {
 			isa = PBXGroup;
 			children = (
@@ -93,6 +117,8 @@
 				A10000000000000000000020 /* Fonts */,
 				A10000000000000000000021 /* Info.plist */,
 				A10000000000000000000031 /* Localizable.xcstrings */,
+				C10000000000000000000020 /* Services */,
+				C10000000000000000000021 /* Views */,
 				B10000000000000000000020 /* Trips */,
 			);
 			path = RideScreenIOS;
@@ -246,6 +272,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000001 /* RideScreenIOSApp.swift in Sources */,
+				C10000000000000000000002 /* TripLocationService.swift in Sources */,
+				C10000000000000000000004 /* TripDiagnosticsLogger.swift in Sources */,
+				C10000000000000000000006 /* TripRecordingViewModel.swift in Sources */,
 				B10000000000000000000002 /* TripModels.swift in Sources */,
 				B10000000000000000000004 /* TripTracker.swift in Sources */,
 				B10000000000000000000006 /* TripJournalStore.swift in Sources */,
