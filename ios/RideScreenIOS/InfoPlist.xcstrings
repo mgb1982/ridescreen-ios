@@ -1,0 +1,52 @@
+{
+  "sourceLanguage": "es",
+  "strings": {
+    "NSLocationWhenInUseUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen usa tu ubicación mientras grabas un trayecto para calcular la distancia y la velocidad."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen utilitza la teva ubicació mentre graves un trajecte per calcular la distància i la velocitat."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen uses your location while recording a trip to calculate distance and speed."
+          }
+        }
+      }
+    },
+    "NSLocationAlwaysAndWhenInUseUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen necesita tu ubicación en segundo plano para continuar grabando el trayecto cuando bloqueas el iPhone. Solo se usa durante una grabación activa."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen necessita la teva ubicació en segon pla per continuar gravant el trajecte quan bloqueges l'iPhone. Només s'utilitza durant una gravació activa."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen needs background location to keep recording a trip when you lock your iPhone. It is used only during an active recording."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

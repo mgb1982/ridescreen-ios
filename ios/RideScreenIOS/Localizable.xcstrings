@@ -345,6 +345,1294 @@
           }
         }
       }
+    },
+    "tab.record": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRABAR"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRAVAR"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RECORD"
+          }
+        }
+      }
+    },
+    "tab.trips": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAYECTOS"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAJECTES"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRIPS"
+          }
+        }
+      }
+    },
+    "tab.diagnostics": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIAGNÓSTICO"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIAGNÒSTIC"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIAGNOSTICS"
+          }
+        }
+      }
+    },
+    "record.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRABAR TRAYECTO"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRAVAR TRAJECTE"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RECORD A TRIP"
+          }
+        }
+      }
+    },
+    "record.status.ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LISTO PARA GRABAR"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PREPARAT PER GRAVAR"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "READY TO RECORD"
+          }
+        }
+      }
+    },
+    "record.status.recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRABANDO"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ENREGISTRANT"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RECORDING"
+          }
+        }
+      }
+    },
+    "record.metric.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TIEMPO"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TEMPS"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ELAPSED"
+          }
+        }
+      }
+    },
+    "record.metric.distance": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DISTANCIA"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DISTÀNCIA"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DISTANCE"
+          }
+        }
+      }
+    },
+    "record.metric.currentSpeed": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VELOCIDAD ACTUAL"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VELOCITAT ACTUAL"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CURRENT SPEED"
+          }
+        }
+      }
+    },
+    "record.metric.maxSpeed": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VELOCIDAD MÁXIMA"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VELOCITAT MÀXIMA"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MAXIMUM SPEED"
+          }
+        }
+      }
+    },
+    "record.value.distance": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f km"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f km"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f km"
+          }
+        }
+      }
+    },
+    "record.value.speed": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d km/h"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d km/h"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d km/h"
+          }
+        }
+      }
+    },
+    "record.points.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d puntos GPS"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d punts GPS"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d GPS points"
+          }
+        }
+      }
+    },
+    "record.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EMPEZAR"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "COMENÇAR"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "START"
+          }
+        }
+      }
+    },
+    "record.stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PARAR"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ATURAR"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STOP"
+          }
+        }
+      }
+    },
+    "record.permission.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu ubicación durante la grabación"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La teva ubicació durant la gravació"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your location while recording"
+          }
+        }
+      }
+    },
+    "record.permission.explanation": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen usa el GPS para calcular la distancia, la velocidad y guardar el recorrido mientras grabas."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen utilitza el GPS per calcular la distància, la velocitat i desar el recorregut mentre graves."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen uses GPS to calculate distance and speed and save the route while you record."
+          }
+        }
+      }
+    },
+    "record.permission.always": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para seguir grabando con la pantalla bloqueada, iOS te pedirá permiso «Siempre» después de que pulses Empezar. La ubicación solo se guarda durante un trayecto activo."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per continuar gravant amb la pantalla bloquejada, iOS et demanarà el permís «Sempre» després que premis Començar. La ubicació només es desa durant un trajecte actiu."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To keep recording while the screen is locked, iOS will ask for “Always” permission after you tap Start. Location is saved only during an active trip."
+          }
+        }
+      }
+    },
+    "record.localOnly": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los trayectos y el diagnóstico se guardan únicamente en este iPhone. No se envían datos."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els trajectes i el diagnòstic es desen només en aquest iPhone. No s'envien dades."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trips and diagnostics stay on this iPhone. No data is sent."
+          }
+        }
+      }
+    },
+    "common.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "common.cancel": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel·lar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "common.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceptar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D'acord"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "common.error": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        }
+      }
+    },
+    "permission.when.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir ubicación mientras usas la app"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permetre la ubicació mentre fas servir l'app"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow location while using the app"
+          }
+        }
+      }
+    },
+    "permission.when.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Necesitamos tu ubicación para grabar el trayecto, calcular la distancia y mostrar la velocidad. Primero solicitamos permiso solo mientras usas RideScreen."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Necessitem la teva ubicació per gravar el trajecte, calcular la distància i mostrar la velocitat. Primer demanem permís només mentre fas servir RideScreen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "We need your location to record the trip, calculate distance and show speed. First, we request access only while you use RideScreen."
+          }
+        }
+      }
+    },
+    "permission.always.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir ubicación también en segundo plano"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permetre la ubicació també en segon pla"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow location in the background"
+          }
+        }
+      }
+    },
+    "permission.always.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para continuar grabando cuando bloquees el iPhone o cambies de app, RideScreen necesita permiso «Siempre». Solo se utiliza mientras la grabación está activa."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per continuar gravant quan bloquegis l'iPhone o canviïs d'app, RideScreen necessita el permís «Sempre». Només s'utilitza mentre la gravació està activa."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To keep recording when you lock your iPhone or switch apps, RideScreen needs “Always” access. It is used only while recording is active."
+          }
+        }
+      }
+    },
+    "permission.always.allow": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir «Siempre»"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permetre «Sempre»"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow Always"
+          }
+        }
+      }
+    },
+    "permission.always.foreground": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo con la app abierta"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Només amb l'app oberta"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foreground only"
+          }
+        }
+      }
+    },
+    "permission.denied.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permiso de ubicación necesario"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cal el permís d'ubicació"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location permission required"
+          }
+        }
+      }
+    },
+    "permission.denied.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa el permiso de ubicación para poder grabar. Puedes cambiarlo en Ajustes de iOS."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa el permís d'ubicació per poder gravar. Pots canviar-lo als Ajustos d'iOS."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable location permission to record a trip. You can change it in iOS Settings."
+          }
+        }
+      }
+    },
+    "permission.openSettings": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir Ajustes"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obrir Ajustos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "permission.background.off.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grabación solo en primer plano"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravació només en primer pla"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foreground recording only"
+          }
+        }
+      }
+    },
+    "permission.background.off.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se ha concedido el permiso «Siempre». El trayecto se grabará mientras RideScreen esté abierta, pero puede detenerse al bloquear el iPhone o cambiar de app."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha concedit el permís «Sempre». El trajecte es gravarà mentre RideScreen estigui oberta, però pot aturar-se en bloquejar l'iPhone o canviar d'app."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Always” permission was not granted. The trip will record while RideScreen is open, but may stop when you lock the iPhone or switch apps."
+          }
+        }
+      }
+    },
+    "permission.services.off.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servicios de ubicación desactivados"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveis d'ubicació desactivats"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location Services are off"
+          }
+        }
+      }
+    },
+    "permission.services.off.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa los servicios de ubicación en Ajustes de iOS para grabar un trayecto."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa els serveis d'ubicació als Ajustos d'iOS per gravar un trajecte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on Location Services in iOS Settings to record a trip."
+          }
+        }
+      }
+    },
+    "recovery.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hay un trayecto interrumpido"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hi ha un trajecte interromput"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An interrupted trip was found"
+          }
+        }
+      }
+    },
+    "recovery.recover": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperar trayecto"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperar trajecte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover trip"
+          }
+        }
+      }
+    },
+    "recovery.discard": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard"
+          }
+        }
+      }
+    },
+    "recovery.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se encontraron %1$d puntos y %.2f km guardados. Puedes continuar grabando desde el último punto o descartar el trayecto."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S'han trobat %1$d punts i %.2f km desats. Pots continuar gravant des de l'últim punt o descartar el trajecte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Found %1$d saved points and %.2f km. You can resume from the last point or discard the trip."
+          }
+        }
+      }
+    },
+    "recovery.message.fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes recuperar o descartar el trayecto guardado."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pots recuperar o descartar el trajecte desat."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can recover or discard the saved trip."
+          }
+        }
+      }
+    },
+    "trip.error.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo iniciar el registro del trayecto."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha pogut iniciar el registre del trajecte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not start trip recording."
+          }
+        }
+      }
+    },
+    "trip.error.finish": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo cerrar y guardar el trayecto."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha pogut tancar i desar el trajecte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not finish and save the trip."
+          }
+        }
+      }
+    },
+    "trip.error.recovery": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo recuperar el trayecto interrumpido."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha pogut recuperar el trajecte interromput."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not recover the interrupted trip."
+          }
+        }
+      }
+    },
+    "trip.error.discard": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo descartar el trayecto interrumpido."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha pogut descartar el trajecte interromput."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not discard the interrupted trip."
+          }
+        }
+      }
+    },
+    "trip.error.export": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo preparar el archivo GPX."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha pogut preparar el fitxer GPX."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not prepare the GPX file."
+          }
+        }
+      }
+    },
+    "trip.error.persistence": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar un punto del trayecto. La grabación se ha detenido para evitar perder más datos."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No s'ha pogut desar un punt del trajecte. La gravació s'ha aturat per evitar perdre més dades."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A trip point could not be saved. Recording was stopped to avoid losing more data."
+          }
+        }
+      }
+    },
+    "trips.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAYECTOS GUARDADOS"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAJECTES DESATS"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SAVED TRIPS"
+          }
+        }
+      }
+    },
+    "trips.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todavía no hay trayectos"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encara no hi ha trajectes"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No trips yet"
+          }
+        }
+      }
+    },
+    "trips.empty.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus trayectos grabados aparecerán aquí. Puedes exportar cualquiera de ellos a GPX."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els trajectes que gravis apareixeran aquí. Pots exportar-los a GPX."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your recorded trips will appear here. You can export any trip as GPX."
+          }
+        }
+      }
+    },
+    "trips.summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %.2f km"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %.2f km"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %.2f km"
+          }
+        }
+      }
+    },
+    "trips.export": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportar GPX"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportar GPX"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export GPX"
+          }
+        }
+      }
+    },
+    "trips.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar trayecto"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar trajecte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete trip"
+          }
+        }
+      }
+    },
+    "diagnostics.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIAGNÓSTICO"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIAGNÒSTIC"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIAGNOSTICS"
+          }
+        }
+      }
+    },
+    "diagnostics.lineCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Últimas %d líneas"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Últimes %d línies"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last %d lines"
+          }
+        }
+      }
+    },
+    "diagnostics.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

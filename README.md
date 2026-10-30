@@ -6,10 +6,17 @@ Proyecto complementario de RideScreen AA para iPhone. Esta primera versión es u
 
 La pantalla de bienvenida se ha instalado y abierto en un iPhone XS. La verificación manual se limitó a esa pantalla; todavía no hay funciones de grabación ni telemetría.
 
-Aún no están implementados:
-- Grabación de rutas ni seguimiento de ubicación.
-- Importación de vídeos.
-- Sincronización de telemetría y superposición sobre vídeo.
+## Grabación de trayectos
+
+La aplicación graba trayectos localmente con CoreLocation. Primero pide permiso «Al usar la app»; solicita «Siempre» únicamente después de que el usuario pulsa Empezar y ve la explicación correspondiente. Si «Siempre» no se concede, puede continuar grabando en primer plano; el registro con la pantalla bloqueada requiere el permiso de segundo plano.
+
+Los puntos GPS se filtran por precisión horizontal (0–50 m) y antigüedad (máximo 10 segundos). Se usa la velocidad de CoreLocation cuando es válida; si no, se calcula entre puntos. No se suma distancia a velocidades inferiores a 0,5 m/s.
+
+Los trayectos activos se escriben punto a punto en JSON Lines dentro de Application Support y se sincronizan periódicamente y al pasar la app a segundo plano. Al reabrir la aplicación se puede recuperar o descartar un trayecto interrumpido. Los trayectos finalizados se convierten al esquema JSON de RideScreen AA: `id`, `start`, `end`, `distanceMeters`, `movingTimeMs`, `maxSpeedMs` y puntos `[lat, lon, timeMs, speedMs]`. Se añaden arrays opcionales `altitudesMeters` y `horizontalAccuracyMeters` para conservar datos iOS.
+
+La exportación GPX 1.1 incluye latitud, longitud, altitud, hora UTC y velocidad en una extensión XML RideScreen. La pantalla Diagnóstico muestra las últimas 500 líneas. Ningún dato se envía fuera del dispositivo.
+
+El workflow ejecuta tests unitarios en el simulador además de compilar Debug y generar el IPA Release sin firma.
 
 ## Compilación con GitHub Actions
 

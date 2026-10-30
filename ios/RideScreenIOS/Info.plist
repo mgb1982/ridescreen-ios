@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>RideScreen usa tu ubicación mientras grabas un trayecto para calcular la distancia y la velocidad.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>RideScreen necesita tu ubicación en segundo plano para continuar grabando el trayecto cuando bloqueas el iPhone. Solo se usa durante una grabación activa.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+    </array>
     <key>UIAppFonts</key>
     <array>
         <string>Archivo-Regular.ttf</string>
