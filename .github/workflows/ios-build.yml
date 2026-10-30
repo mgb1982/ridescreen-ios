@@ -12,7 +12,7 @@ permissions:
 jobs:
   build-simulator:
     name: Build for iOS Simulator
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -24,6 +24,11 @@ jobs:
         run: |
           ./scripts/prepare-ios-fonts.sh
           python3 scripts/validate-ios-fonts.py
+
+      - name: Select Xcode 16.4
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
 
       - name: Show Xcode version
         run: xcodebuild -version
@@ -42,7 +47,7 @@ jobs:
 
   build-device-unsigned:
     name: Build unsigned package for physical iPhone
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -55,6 +60,11 @@ jobs:
           ./scripts/prepare-ios-fonts.sh
           python3 scripts/validate-ios-fonts.py
 
+      - name: Select Xcode 16.4
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.4'
+
       - name: Show Xcode version
         run: xcodebuild -version
 
@@ -64,7 +74,7 @@ jobs:
             -project ios/RideScreenIOS.xcodeproj \
             -scheme RideScreenIOS \
             -sdk iphoneos \
-            -configuration Debug \
+            -configuration Release \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/ios-device-build" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
@@ -73,17 +83,17 @@ jobs:
 
       - name: Package unsigned IPA
         run: |
-          APP_PATH="$RUNNER_TEMP/ios-device-build/Build/Products/Debug-iphoneos/RideScreenIOS.app"
+          APP_PATH="$RUNNER_TEMP/ios-device-build/Build/Products/Release-iphoneos/RideScreenIOS.app"
           test -d "$APP_PATH"
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/RideScreenIOS.app"
-          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/RideScreenIOS-unsigned.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "$RUNNER_TEMP/ipa/Payload" "$RUNNER_TEMP/RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned.ipa"
           test -f "$RUNNER_TEMP/RideScreenIOS-unsigned.ipa"
 
       - name: Upload unsigned package
         uses: actions/upload-artifact@v4
         with:
-          name: RideScreenIOS-unsigned-IPA
-          path: ${{ runner.temp }}/RideScreenIOS-unsigned.ipa
+          name: RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned-IPA
+          path: ${{ runner.temp }}/RideScreenIOS-v0.1.0-build-${{ github.run_number }}-unsigned.ipa
           if-no-files-found: error
           retention-days: 7
