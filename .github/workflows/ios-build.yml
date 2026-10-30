@@ -17,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Prepare Archivo fonts
+      - name: Prepare Archivo fonts and iOS app icon
         run: ./scripts/prepare-ios-fonts.sh
 
       - name: Show Xcode version
@@ -41,7 +41,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Prepare Archivo fonts
+      - name: Prepare Archivo fonts and iOS app icon
         run: ./scripts/prepare-ios-fonts.sh
 
       - name: Show Xcode version
