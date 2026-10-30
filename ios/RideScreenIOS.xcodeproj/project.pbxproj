@@ -143,6 +143,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = RideScreen;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mgb1982.RideScreenIOS;
@@ -160,6 +161,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = RideScreen;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.mgb1982.RideScreenIOS;
