@@ -22,7 +22,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/font-check"
           "$RUNNER_TEMP/font-check/bin/python" -m pip install --upgrade pip fonttools
 
-      - name: Repair, decode and validate Archivo fonts
+      - name: Decode and validate Archivo fonts
         run: |
           ./scripts/prepare-ios-fonts.sh
           "$RUNNER_TEMP/font-check/bin/python" scripts/validate-ios-fonts.py
@@ -59,7 +59,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/font-check"
           "$RUNNER_TEMP/font-check/bin/python" -m pip install --upgrade pip fonttools
 
-      - name: Repair, decode and validate Archivo fonts
+      - name: Decode and validate Archivo fonts
         run: |
           ./scripts/prepare-ios-fonts.sh
           "$RUNNER_TEMP/font-check/bin/python" scripts/validate-ios-fonts.py
