@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOURCE_DIR="$ROOT_DIR/tools/ios-fonts"
 DEST_DIR="$ROOT_DIR/ios/RideScreenIOS/Fonts"
 APP_ICON="$ROOT_DIR/ios/RideScreenIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
@@ -46,14 +47,15 @@ python3 - "$ROOT_DIR/design/icon.svg" "$TEMP_SVG" <<'PY'
 import sys
 from pathlib import Path
 
-source = Path(sys.argv[1]).read_text(encoding="utf-8")
+source_path = Path(sys.argv[1])
+source = source_path.read_text(encoding="utf-8")
 source = source.replace(
     '<g clip-path="url(#c)">',
     '<rect x="18" y="18" width="72" height="72" fill="#1A231D"/><g clip-path="url(#c)">',
     1,
 )
 source = source.replace("scale(0.8 0.8)", "scale(1 1)", 1)
-if source == Path(sys.argv[1]).read_text(encoding="utf-8"):
+if source == source_path.read_text(encoding="utf-8"):
     raise SystemExit("Could not prepare the larger square app icon from design/icon.svg")
 Path(sys.argv[2]).write_text(source, encoding="utf-8")
 PY
