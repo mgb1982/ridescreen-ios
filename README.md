@@ -1,35 +1,91 @@
 # RideScreen iOS
 
-An independent iOS companion project for RideScreen AA, focused on recording rides and adding telemetry overlays to video.
+Aplicación iOS complementaria de RideScreen, escrita en SwiftUI. El proyecto se distribuye bajo **AGPL-3.0-or-later**.
 
-## Project status
+> **Estado actual:** prototipo de bienvenida/preview. La app se ha instalado y abierto en un iPhone XS; por ahora solo muestra la pantalla de presentación. No implementa todavía grabación de rutas, ubicación, importación de vídeo, superposición de telemetría ni otras funciones de RideScreen AA.
 
-**Early scaffold. Not tested on a real device.** This repository currently establishes the project structure and a cloud build workflow. Trip recording, location tracking, video import, telemetry synchronization, and overlays are not implemented yet.
+## Estado y alcance
 
-## Goals
+- Plataforma objetivo: iPhone, orientación vertical.
+- Bundle identifier: `com.mgb1982.RideScreenIOS`.
+- Versión de marketing: `0.1.0`.
+- La pantalla usa el sistema visual RideScreen y la familia tipográfica Archivo.
+- El proyecto conserva la configuración de launch screen de Xcode para iniciar a pantalla completa.
+- No se incluyen certificados, perfiles de aprovisionamiento, claves, cuentas de Apple ni secretos.
 
-- Record a ride route, elapsed time, distance, and location-derived speed.
-- Import videos recorded on an iPhone or compatible action camera.
-- Synchronize available trip telemetry with video and render an overlay.
-- Keep the iOS app independent from the Android projection functionality.
+## Compilación
 
-## Build
+La compilación CI se ejecuta en GitHub Actions sobre `macos-15` y selecciona explícitamente Pinned Xcode. Consulta [ios-build.yml](.github/workflows/ios-build.yml) para ver la versión fijada.
 
-The GitHub Actions workflow in `.github/workflows/ios-build.yml` runs two jobs on a macOS runner:
+El workflow produce dos comprobaciones:
 
-- **iOS Simulator build:** checks that the current SwiftUI project compiles for the simulator.
-- **Unsigned device package:** compiles for iOS devices and uploads `RideScreenIOS-unsigned-IPA` as a temporary workflow artifact.
+1. **iOS Simulator:** compilación Debug sin firma.
+2. **Dispositivo físico:** compilación Release sin firma, empaquetada como IPA.
 
-The device artifact is **unsigned and cannot be installed directly**. It is a build/package check and a starting point for a future signing workflow, not an installable release. Artifacts are retained for 7 days.
+El número de ejecución de GitHub Actions se pasa como `CURRENT_PROJECT_VERSION`, por lo que cada IPA tiene un número de build distinto. El artefacto se publica con un nombre de la forma:
 
-## Installation and signing
+`RideScreenIOS-v0.1.0-build-N-unsigned-IPA`
 
-Device installation, signing, and distribution are not configured yet. Apple's free Personal Team signing requires Xcode and provisioning must be renewed periodically. Do not add Apple signing certificates, private keys, provisioning profiles, or account credentials to the repository.
+El IPA es **unsigned**. El workflow no firma la app ni crea certificados o perfiles de aprovisionamiento.
 
-## License
+Para compilar manualmente desde un Mac con Xcode seleccionado y las dependencias indicadas más abajo:
 
-This project is licensed under **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**. See [LICENSE](LICENSE).
+```bash
+./scripts/prepare-ios-fonts.sh
 
-## Contributions
+xcodebuild \
+  -project ios/RideScreenIOS.xcodeproj \
+  -scheme RideScreenIOS \
+  -sdk iphonesimulator \
+  -configuration Debug \
+  -destination 'generic/platform=iOS Simulator' \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
 
-The project is in its initial scaffold phase. Features and supported devices will be documented as they are implemented and tested.
+La fase de preparación del target ejecuta únicamente `scripts/prepare-ios-fonts.sh`: decodifica los archivos TTF desde Base64 con Python estándar. No instala herramientas ni genera recursos gráficos.
+
+## Fuentes Archivo
+
+Los cinco archivos de fuente de entrada están en `tools/ios-fonts/`:
+
+- `Archivo-Regular.ttf.b64`
+- `Archivo-Medium.ttf.b64`
+- `Archivo-SemiBold.ttf.b64`
+- `Archivo-ExtraBold.ttf.b64`
+- `ArchivoBlack-Regular.ttf.b64`
+
+Se almacenan en Base64 para mantener los TTF como recursos de texto portables y reproducibles dentro del repositorio. Antes de compilar, CI usa **fontTools** para normalizar los metadatos de Archivo, decodifica los TTF a `ios/RideScreenIOS/Fonts/` y valida sus nombres PostScript. También comprueba que `UIAppFonts` y los nombres usados por `Font.custom` coincidan.
+
+Los cuatro pesos de Archivo tienen nombres PostScript distintos. `ArchivoBlack-Regular` se conserva sin modificar. La licencia OFL de las fuentes se encuentra junto a los recursos en `ios/RideScreenIOS/Fonts/OFL-Archivo.txt`.
+
+Scripts relacionados:
+
+- `scripts/repair-archivo-fonts.py`: normaliza los nombres y pesos usando fontTools.
+- `scripts/prepare-ios-fonts.sh`: decodifica Base64 a TTF usando únicamente Python estándar.
+- `scripts/validate-ios-fonts.py`: valida los cinco nombres PostScript y su correspondencia con Info.plist y SwiftUI.
+
+## Icono de la aplicación
+
+El recurso vectorial fuente está en `design/icon.svg`. Cuando se modifique ese SVG, regenera el icono de iOS y confirma el PNG resultante en el repositorio:
+
+```bash
+brew install librsvg
+python3 -m pip install Pillow
+./scripts/generate-app-icon.sh
+git add ios/RideScreenIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+```
+
+El generador crea un PNG opaco RGB de 1024 × 1024, sin canal alfa. La generación se mantiene separada de la fase de compilación de Xcode; CI ejecuta el script como paso previo para validar y compilar el recurso derivado.
+
+## Localización
+
+La pantalla inicial usa el String Catalog `ios/RideScreenIOS/Localizable.xcstrings`, con español como idioma base y traducciones para catalán e inglés. La estructura queda preparada para añadir otros idiomas posteriormente.
+
+## Instalación
+
+TODO: documentar aquí el procedimiento de instalación que decida el mantenedor.
+
+## Licencia
+
+AGPL-3.0-or-later. Consulta [LICENSE](LICENSE).
