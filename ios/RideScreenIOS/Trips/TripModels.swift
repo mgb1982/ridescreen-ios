@@ -25,6 +25,22 @@ struct TripPoint: Codable, Equatable, Sendable {
     let speedMetersPerSecond: Double
     let horizontalAccuracyMeters: Double
 
+    init(
+        latitude: Double,
+        longitude: Double,
+        altitudeMeters: Double,
+        timestamp: Date,
+        speedMetersPerSecond: Double,
+        horizontalAccuracyMeters: Double
+    ) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.altitudeMeters = altitudeMeters
+        self.timestamp = timestamp
+        self.speedMetersPerSecond = speedMetersPerSecond
+        self.horizontalAccuracyMeters = horizontalAccuracyMeters
+    }
+
     init(fix: GPSFix, speedMetersPerSecond: Double) {
         latitude = fix.latitude
         longitude = fix.longitude
