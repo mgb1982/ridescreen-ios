@@ -36,6 +36,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000002 /* RideScreenIOSApp.swift */,
+				A10000000000000000000013 /* Assets.xcassets */,
 			);
 			path = RideScreenIOS;
 			sourceTree = "<group>";
