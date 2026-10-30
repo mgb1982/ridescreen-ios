@@ -69,7 +69,7 @@
 			path = Fonts;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000007 /* Products */ {
+		A10000000000000000000007 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000003 /* RideScreenIOS.app */,
