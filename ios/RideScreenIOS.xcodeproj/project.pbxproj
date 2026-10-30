@@ -84,6 +84,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = A10000000000000000000009 /* Build configuration list for PBXNativeTarget "RideScreenIOS" */;
 			buildPhases = (
+				A10000000000000000000022 /* Prepare Archivo fonts and app icon */,
 				A1000000000000000000000A /* Sources */,
 				A10000000000000000000004 /* Frameworks */,
 				A1000000000000000000000B /* Resources */,
@@ -123,6 +124,20 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A10000000000000000000022 /* Prepare Archivo fonts and app icon */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ();
+			name = "Prepare Archivo fonts and app icon";
+			outputPaths = ();
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/../scripts/prepare-ios-fonts.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A1000000000000000000000B /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000012 /* Assets.xcassets in Resources */, A10000000000000000000014 /* Archivo-Regular.ttf in Resources */, A10000000000000000000015 /* Archivo-Medium.ttf in Resources */, A10000000000000000000016 /* Archivo-SemiBold.ttf in Resources */, A10000000000000000000017 /* Archivo-ExtraBold.ttf in Resources */, A10000000000000000000018 /* ArchivoBlack-Regular.ttf in Resources */, A10000000000000000000019 /* OFL-Archivo.txt in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
