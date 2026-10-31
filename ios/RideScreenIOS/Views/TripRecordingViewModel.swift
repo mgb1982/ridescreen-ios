@@ -129,7 +129,7 @@ final class TripRecordingViewModel: ObservableObject {
         locationService.stopUpdating()
         isRecording = false
         let finishedTrip = tracker?.completed(at: Date())
-        log("Recording stopped; points=\(finishedTrip?.points.count ?? 0)")
+        log("Recording stopped; points=\(finishedTrip?.points.count ?? 0) distance=\(Int(finishedTrip?.distanceMeters ?? 0))m maxSpeed=\(String(format: "%.1f", finishedTrip?.maximumSpeedMetersPerSecond ?? 0))m/s")
         Task {
             await persistenceTask?.value
             do {

@@ -27,6 +27,7 @@ enum GPSFixFilter {
 /// CLLocation.distance(from:); no CoreLocation object crosses into this domain type.
 struct TripTracker: Sendable {
     static let minimumMovingSpeedMetersPerSecond = 0.5
+    static let maximumPlausibleSpeedMetersPerSecond = 70.0
 
     private(set) var trip: RecordedTrip
     private(set) var currentSpeedMetersPerSecond = 0.0
@@ -73,15 +74,18 @@ struct TripTracker: Sendable {
         let segmentDistance = segmentDistanceMeters.flatMap {
             $0.isFinite && $0 >= 0 ? $0 : nil
         } ?? 0
+        let impliedSpeed = interval > 0 ? segmentDistance / interval : 0
 
-        let speed: Double
-        if fix.speedMetersPerSecond.isFinite && fix.speedMetersPerSecond >= 0 {
-            speed = fix.speedMetersPerSecond
-        } else if interval > 0 {
-            speed = segmentDistance / interval
-        } else {
-            speed = 0
+        // Nothing faster than this is possible on a motorcycle; such fixes are cold-start or multipath noise.
+        if previous != nil, impliedSpeed > Self.maximumPlausibleSpeedMetersPerSecond {
+            return .rejected(.implausibleSpeed)
         }
+
+        let reportedSpeed = fix.speedMetersPerSecond
+        let reportedIsPlausible = reportedSpeed.isFinite
+            && reportedSpeed >= 0
+            && reportedSpeed <= Self.maximumPlausibleSpeedMetersPerSecond
+        let speed = reportedIsPlausible ? reportedSpeed : impliedSpeed
 
         let point = TripPoint(fix: fix, speedMetersPerSecond: speed)
         let distanceAdded = speed >= Self.minimumMovingSpeedMetersPerSecond ? segmentDistance : 0

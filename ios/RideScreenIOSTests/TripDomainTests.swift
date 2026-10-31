@@ -45,6 +45,31 @@ final class TripProcessorTests: XCTestCase {
         XCTAssertEqual(tracker.trip.maximumSpeedMetersPerSecond, 10, accuracy: 0.001)
     }
 
+    func testIgnoresAbsurdColdStartSpeedAndRejectsTeleportJumps() {
+        var tracker = TripTracker(startedAt: Date(timeIntervalSince1970: 100))
+        let first = fix(Date(timeIntervalSince1970: 100), speed: 300)
+        let result = tracker.ingest(first, now: first.timestamp, segmentDistanceMeters: 0)
+        guard case .accepted(_, _, let speed) = result else { return XCTFail("Expected accepted point") }
+        XCTAssertEqual(speed, 0, accuracy: 0.001)
+        XCTAssertEqual(tracker.trip.maximumSpeedMetersPerSecond, 0, accuracy: 0.001)
+
+        let jump = fix(Date(timeIntervalSince1970: 101), speed: 3)
+        XCTAssertEqual(tracker.ingest(jump, now: jump.timestamp, segmentDistanceMeters: 900), .rejected(.implausibleSpeed))
+        XCTAssertEqual(tracker.trip.distanceMeters, 0, accuracy: 0.001)
+    }
+
+    func testResolvedDistanceFallsBackToStoredPoints() {
+        // 0.001 degrees of latitude is about 111 m.
+        let points = [
+            TripPoint(latitude: 41.000, longitude: 2, altitudeMeters: 0, timestamp: Date(timeIntervalSince1970: 1), speedMetersPerSecond: 1, horizontalAccuracyMeters: 5),
+            TripPoint(latitude: 41.001, longitude: 2, altitudeMeters: 0, timestamp: Date(timeIntervalSince1970: 2), speedMetersPerSecond: 1, horizontalAccuracyMeters: 5),
+            TripPoint(latitude: 41.002, longitude: 2, altitudeMeters: 0, timestamp: Date(timeIntervalSince1970: 3), speedMetersPerSecond: 1, horizontalAccuracyMeters: 5),
+        ]
+        XCTAssertEqual(TripGeometry.distanceMeters(points), 222.4, accuracy: 1)
+        XCTAssertEqual(TripGeometry.resolvedDistance(stored: 0, points: points), 222.4, accuracy: 1)
+        XCTAssertEqual(TripGeometry.resolvedDistance(stored: 150, points: points), 150, accuracy: 0.001)
+    }
+
     private func fix(_ date: Date, accuracy: Double = 5, speed: Double = 1) -> GPSFix {
         GPSFix(latitude: 41, longitude: 2, altitudeMeters: 120, timestamp: date,
                speedMetersPerSecond: speed, horizontalAccuracyMeters: accuracy)

@@ -15,6 +15,7 @@ enum GPSFixRejection: String, Equatable, Sendable {
     case stale
     case futureTimestamp
     case invalidCoordinate
+    case implausibleSpeed
 }
 
 struct TripPoint: Codable, Equatable, Sendable {
@@ -86,5 +87,32 @@ enum TripUpdate: Equatable, Sendable {
     var wasAccepted: Bool {
         if case .accepted = self { return true }
         return false
+    }
+}
+
+/// Distance along a recorded route, computed from the stored points themselves.
+enum TripGeometry {
+    private static let earthRadiusMeters = 6_371_000.0
+
+    static func distanceMeters(_ points: [TripPoint]) -> Double {
+        guard points.count > 1 else { return 0 }
+        var total = 0.0
+        for (a, b) in zip(points, points.dropFirst()) {
+            total += haversine(a.latitude, a.longitude, b.latitude, b.longitude)
+        }
+        return total
+    }
+
+    /// The stored total is trusted when it is positive; if it was lost (0) the route gives the distance.
+    static func resolvedDistance(stored: Double, points: [TripPoint]) -> Double {
+        stored > 0 ? stored : distanceMeters(points)
+    }
+
+    private static func haversine(_ lat1: Double, _ lon1: Double, _ lat2: Double, _ lon2: Double) -> Double {
+        let rad = Double.pi / 180
+        let dLat = (lat2 - lat1) * rad
+        let dLon = (lon2 - lon1) * rad
+        let h = sin(dLat / 2) * sin(dLat / 2) + cos(lat1 * rad) * cos(lat2 * rad) * sin(dLon / 2) * sin(dLon / 2)
+        return 2 * earthRadiusMeters * asin(min(1, sqrt(h)))
     }
 }
