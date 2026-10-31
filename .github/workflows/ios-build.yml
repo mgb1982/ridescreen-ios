@@ -47,6 +47,17 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Run unit tests on iPhone 16 simulator
+        run: |
+          xcodebuild \
+            -project ios/RideScreenIOS.xcodeproj \
+            -scheme RideScreenIOS \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath "$RUNNER_TEMP/ios-test-build" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+
   build-device-unsigned:
     name: Build unsigned package for physical iPhone
     runs-on: macos-15
