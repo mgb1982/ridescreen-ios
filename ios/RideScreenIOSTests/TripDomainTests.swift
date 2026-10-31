@@ -135,3 +135,28 @@ final class TripGPXExporterTests: XCTestCase {
         XCTAssertTrue(xml.contains("2023-11-14T22:13:25"))
     }
 }
+
+final class TripStatsTests: XCTestCase {
+    func testDistanceCountsOnlyTripsStartedThatDay() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_700_000_000) // 14 Nov 2023, 22:13 UTC
+        let today = trip(start: now.addingTimeInterval(-3_600), meters: 5_000)
+        let yesterday = trip(start: now.addingTimeInterval(-86_400), meters: 9_000)
+        XCTAssertEqual(TripStats.distanceMeters(on: now, trips: [today, yesterday], calendar: calendar), 5_000, accuracy: 0.001)
+        XCTAssertEqual(TripStats.totalDistanceMeters([today, yesterday]), 14_000, accuracy: 0.001)
+        XCTAssertEqual(TripStats.totalDistanceMeters([]), 0, accuracy: 0.001)
+    }
+
+    private func trip(start: Date, meters: Double) -> RecordedTrip {
+        RecordedTrip(
+            id: UUID().uuidString,
+            startedAt: start,
+            endedAt: start.addingTimeInterval(600),
+            distanceMeters: meters,
+            movingTimeMilliseconds: 600_000,
+            maximumSpeedMetersPerSecond: 10,
+            points: []
+        )
+    }
+}
