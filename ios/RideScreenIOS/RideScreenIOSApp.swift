@@ -21,12 +21,14 @@ enum RideFont {
 @main
 struct RideScreenIOSApp: App {
     @StateObject private var viewModel = TripRecordingViewModel()
+    @StateObject private var garage = GarageStore()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             MainTabView()
                 .environmentObject(viewModel)
+                .environmentObject(garage)
                 .onChange(of: scenePhase) { phase in
                     viewModel.handleScenePhase(active: phase == .active)
                 }
@@ -35,21 +37,29 @@ struct RideScreenIOSApp: App {
 }
 
 struct MainTabView: View {
+    @State private var selection: MainTab = .home
+
     var body: some View {
-        TabView {
+        TabView(selection: $selection) {
+            HomeScreen(selection: $selection)
+                .tabItem { Label("tab.home", systemImage: "house") }
+                .tag(MainTab.home)
             RecordingScreen()
                 .tabItem { Label("tab.record", systemImage: "record.circle") }
+                .tag(MainTab.record)
             TripsScreen()
                 .tabItem { Label("tab.trips", systemImage: "point.topleft.down.curvedto.point.bottomright.up") }
+                .tag(MainTab.trips)
             DiagnosticsScreen()
                 .tabItem { Label("tab.diagnostics", systemImage: "stethoscope") }
+                .tag(MainTab.diagnostics)
         }
         .tint(RideBrand.gold)
         .preferredColorScheme(.dark)
     }
 }
 
-private struct RideScreenHeader: View {
+struct RideScreenHeader: View {
     let eyebrow: LocalizedStringKey
 
     var body: some View {
@@ -473,7 +483,7 @@ private struct ActivityShareSheet: UIViewControllerRepresentable {
 }
 
 
-private extension Color {
+extension Color {
     init(hex: UInt) {
         self.init(
             red: Double((hex >> 16) & 0xFF) / 255,
