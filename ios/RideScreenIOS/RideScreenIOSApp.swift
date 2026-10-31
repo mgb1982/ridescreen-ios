@@ -298,6 +298,7 @@ struct TripsScreen: View {
     @EnvironmentObject private var viewModel: TripRecordingViewModel
 
     var body: some View {
+        NavigationStack {
         ZStack {
             RideBackground()
             ScrollView {
@@ -308,7 +309,12 @@ struct TripsScreen: View {
                     } else {
                         LazyVStack(spacing: 10) {
                             ForEach(viewModel.completedTrips) { trip in
-                                tripRow(trip)
+                                NavigationLink {
+                                    TripDetailScreen(trip: trip)
+                                } label: {
+                                    tripRow(trip)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -324,12 +330,14 @@ struct TripsScreen: View {
         .onAppear {
             Task { try? await viewModel.refreshTrips() }
         }
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(item: Binding(
             get: { viewModel.shareURL.map(ShareFile.init(url:)) },
             set: { value in if value == nil { viewModel.clearShareURL() } }
         )) { file in
             ActivityShareSheet(activityItems: [file.url])
                 .ignoresSafeArea()
+        }
         }
     }
 
@@ -360,7 +368,7 @@ struct TripsScreen: View {
                         .foregroundStyle(RideBrand.text)
                     Text(String(format: NSLocalizedString("trips.summary", comment: ""),
                                 durationText(trip.elapsedDuration),
-                                trip.distanceMeters / 1_000))
+                                TripGeometry.resolvedDistance(stored: trip.distanceMeters, points: trip.points) / 1_000))
                         .font(RideFont.regular(12))
                         .foregroundStyle(RideBrand.secondary)
                 }
@@ -438,7 +446,7 @@ struct DiagnosticsScreen: View {
     }
 }
 
-private struct RideBackground: View {
+struct RideBackground: View {
     var body: some View {
         ZStack {
             RideBrand.background

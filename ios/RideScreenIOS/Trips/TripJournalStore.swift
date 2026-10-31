@@ -241,7 +241,7 @@ actor TripJournalStore {
                 id: tripID,
                 startedAt: start,
                 endedAt: endedAt,
-                distanceMeters: distance,
+                distanceMeters: TripGeometry.resolvedDistance(stored: distance, points: points),
                 movingTimeMilliseconds: movingMilliseconds,
                 maximumSpeedMetersPerSecond: maxSpeed,
                 points: points
@@ -305,7 +305,10 @@ actor TripJournalStore {
             id: id,
             startedAt: Date(timeIntervalSince1970: start.doubleValue / 1_000),
             endedAt: Date(timeIntervalSince1970: end.doubleValue / 1_000),
-            distanceMeters: (object["distanceMeters"] as? NSNumber)?.doubleValue ?? 0,
+            distanceMeters: TripGeometry.resolvedDistance(
+                stored: (object["distanceMeters"] as? NSNumber)?.doubleValue ?? 0,
+                points: points
+            ),
             movingTimeMilliseconds: (object["movingTimeMs"] as? NSNumber)?.int64Value ?? 0,
             maximumSpeedMetersPerSecond: (object["maxSpeedMs"] as? NSNumber)?.doubleValue ?? 0,
             points: points
