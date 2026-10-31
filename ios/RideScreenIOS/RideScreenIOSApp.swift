@@ -446,7 +446,7 @@ struct DiagnosticsScreen: View {
     }
 }
 
-private struct RideBackground: View {
+struct RideBackground: View {
     var body: some View {
         ZStack {
             RideBrand.background
