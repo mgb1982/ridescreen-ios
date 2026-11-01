@@ -74,7 +74,7 @@ enum PKEProtocol {
         // CommonCrypto is used because the box requires AES-128/ECB without padding.
         var output = [UInt8](repeating: 0, count: 16); var moved: size_t = 0
         let status = key.withUnsafeBytes { kp in block.withUnsafeBytes { bp in output.withUnsafeMutableBytes { op in
-            CCCrypt(CCOperation(kCCEncrypt), CCAlgorithm(kCCAlgorithmAES), CCOptions(kCCOptionECBMode), kp.baseAddress, key.count, nil, bp.baseAddress, block.count, op.baseAddress, output.count, &moved)
+            CCCrypt(CCOperation(kCCEncrypt), CCAlgorithm(kCCAlgorithmAES), CCOptions(kCCOptionECBMode), kp.baseAddress, key.count, nil, bp.baseAddress, block.count, op.baseAddress, 16, &moved)
         }}}
         return status == kCCSuccess && moved == 16 ? Data(output) : nil
     }
