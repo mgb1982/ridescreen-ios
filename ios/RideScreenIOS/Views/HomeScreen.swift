@@ -235,7 +235,7 @@ struct HomeScreen: View {
                         Text(latest.startedAt.formatted(date: .abbreviated, time: .shortened))
                             .font(RideFont.semiBold(14))
                             .foregroundStyle(RideBrand.text)
-                        Text("\(Self.kmText(latest.distanceMeters)) km Â· \(Self.duration(latest.elapsedDuration))")
+                        Text("\(Self.kmText(TripGeometry.resolvedDistance(stored: latest.distanceMeters, points: latest.points))) km · \(Self.duration(latest.elapsedDuration))")
                             .font(RideFont.regular(12))
                             .foregroundStyle(RideBrand.secondary)
                     }
@@ -331,8 +331,8 @@ private struct PKEControlsCard: View {
                     .font(RideFont.semiBold(12)).foregroundStyle(RideBrand.gold)
             }
             HStack(spacing: 16) {
-                Label(pke.voltage.map { String(format: "%.1f V", $0) } ?? "â€” V", systemImage: "battery.100")
-                Label(pke.locked == nil ? "Estado â€”" : (pke.locked! ? "Bloqueada" : "Desbloqueada"), systemImage: "lock")
+                Label(pke.voltage.map { String(format: "%.1f V", $0) } ?? "— V", systemImage: "battery.100")
+                Label(pke.locked == nil ? "Estado —" : (pke.locked! ? "Bloqueada" : "Desbloqueada"), systemImage: "lock")
                 Spacer()
                 Button { Task { await pke.refresh() } } label: { Image(systemName: "arrow.clockwise") }
                     .disabled(pke.status.contains("Conectando"))
@@ -350,7 +350,7 @@ private struct PKEControlsCard: View {
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
         .onAppear { location.startSafetyMonitoring() }
         .onDisappear { location.stopSafetyMonitoring() }
-        .confirmationDialog("Â¿Confirmas abrir este accesorio?", isPresented: $showAccessoryConfirmation, titleVisibility: .visible) {
+        .confirmationDialog("¿Confirmas abrir este accesorio?", isPresented: $showAccessoryConfirmation, titleVisibility: .visible) {
             Button(pendingAccessory.title) { Task { await pke.execute(pendingAccessory, speedKmh: location.freshSpeedKmh()) } }
             Button("Cancelar", role: .cancel) {}
         }
@@ -358,7 +358,7 @@ private struct PKEControlsCard: View {
             NavigationStack {
                 Form {
                     Section("Credenciales PKE") {
-                        TextField("CÃ³digo PKE", text: $code).keyboardType(.numberPad).textContentType(.none)
+                        TextField("Código PKE", text: $code).keyboardType(.numberPad).textContentType(.none)
                         SecureField("McuID (32 caracteres hex)" , text: $mcuID).textInputAutocapitalization(.characters).autocorrectionDisabled()
                     }
                     Section { Text("Se guardan solo en este iPhone y no se escriben en los registros.") }
@@ -370,7 +370,7 @@ private struct PKEControlsCard: View {
                         Button("Guardar") {
                             let cleanCode = code.filter(\.isNumber)
                             let cleanID = mcuID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                            guard cleanCode.count >= 8, PKEProtocol.validMcuID(cleanID) else { pke.status = "Revisa el cÃ³digo PKE y el McuID"; return }
+                            guard cleanCode.count >= 8, PKEProtocol.validMcuID(cleanID) else { pke.status = "Revisa el código PKE y el McuID"; return }
                             PKECredentials.set(cleanCode, account: "code"); PKECredentials.set(cleanID, account: "mcuid"); showSetup = false
                         }
                     }
