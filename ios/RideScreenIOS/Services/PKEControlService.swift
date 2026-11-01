@@ -114,6 +114,10 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     private var connectWaiter: CheckedContinuation<Void, Error>?
     private var readyWaiter: CheckedContinuation<Void, Error>?
 
+    private func log(_ message: String) {
+        Task { try? await TripDiagnosticsLogger.shared.append("PKE: \(message)") }
+    }
+
     override init() { super.init(); central = CBCentralManager(delegate: self, queue: .main) }
     func refresh() async { await run { try await self.readStatus() } }
     func execute(_ action: PKEAction, speedKmh: Double?) async {
@@ -121,7 +125,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         await run { try await self.send(action) }
     }
     private func run(_ operation: @escaping () async throws -> Void) async {
-        do { try await operation() } catch { status = error.localizedDescription }
+        do { try await operation() } catch { log("operation failed: \(error.localizedDescription)"); status = error.localizedDescription }
     }
     private func credentials() throws -> (String, String) {
         guard let code = PKECredentials.get("code"), code.count >= 8 else { throw PKEError.missingCredentials }
@@ -129,6 +133,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         return (code, mcu)
     }
     private func readStatus() async throws {
+        log("battery/status refresh started")
         let (code, _) = try credentials(); status = "Conectando con la cajaâ€¦"
         try await open(code: code)
         defer { close() }
@@ -140,6 +145,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         status = "Conectado"
     }
     private func send(_ action: PKEAction) async throws {
+        log("action started: \(action.title)")
         let (code, mcu) = try credentials(); status = "Conectando con la cajaâ€¦"
         try await open(code: code); defer { close() }
         let challengeReply = try await ask(code: code, command: "008")
@@ -154,16 +160,20 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     }
     private func open(code: String) async throws {
         expectedCode = code
+        log("Bluetooth state: \(central.state.rawValue); scanning for NUS service")
         guard central.state == .poweredOn else { throw PKEError.bluetoothOff }
         let found = try await withCheckedThrowingContinuation { (c: CheckedContinuation<CBPeripheral, Error>) in
             scanWaiter = c; central.scanForPeripherals(withServices: [PKEProtocol.service]);
             Task { try? await Task.sleep(for: .seconds(12)); if self.scanWaiter != nil { self.central.stopScan(); self.scanWaiter?.resume(throwing: PKEError.notFound); self.scanWaiter = nil } }
         }
         peripheral = found; found.delegate = self
+        log("matching peripheral found; connecting")
         try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in connectWaiter = c; central.connect(found) }
         try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in readyWaiter = c; found.discoverServices([PKEProtocol.service]) }
+        log("UART characteristics and notifications ready")
     }
     private func ask(code: String, command: String) async throws -> String {
+        log("request sent: \(command); waiting for response")
         try await write(PKEProtocol.frame(code: code, command: command)); return try await waitReply(command: String(command.prefix(3)))
     }
     private func write(_ data: Data) async throws {
@@ -194,10 +204,11 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data ?? Data()
         let advertHex = (Array(serviceData.values) + [manufacturerData]).map { $0.map { String(format: "%02X", $0) }.joined() }.joined()
         guard name.contains(expectedCode) || name == "PKE-" + expectedCode.suffix(4) || advertHex.contains(expectedCode) else { return }
+        log("advertisement matched expected device; RSSI \(rssi)")
         central.stopScan(); scanWaiter?.resume(returning: p); scanWaiter = nil
     }
-    func centralManager(_ central: CBCentralManager, didConnect p: CBPeripheral) { connectWaiter?.resume(); connectWaiter = nil }
-    func centralManager(_ central: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { connectWaiter?.resume(throwing: error ?? PKEError.noLink); connectWaiter = nil }
+    func centralManager(_ central: CBCentralManager, didConnect p: CBPeripheral) { log("connected; discovering UART service"); connectWaiter?.resume(); connectWaiter = nil }
+    func centralManager(_ central: CBCentralManager, didFailToConnect p: CBPeripheral, error: Error?) { log("connection failed: \(error?.localizedDescription ?? "unknown")"); connectWaiter?.resume(throwing: error ?? PKEError.noLink); connectWaiter = nil }
     func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
         guard error == nil, let s = p.services?.first(where: { $0.uuid == PKEProtocol.service }) else { readyWaiter?.resume(throwing: PKEError.noLink); readyWaiter = nil; return }
         p.discoverCharacteristics([PKEProtocol.rx, PKEProtocol.tx], for: s)
@@ -209,12 +220,13 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     func peripheral(_ p: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) { if characteristic.uuid == PKEProtocol.tx { if let error { readyWaiter?.resume(throwing: error) } else { readyWaiter?.resume() }; readyWaiter = nil } }
     func peripheral(_ p: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) { if let error { writeWaiter?.resume(throwing: error) } else { writeWaiter?.resume() }; writeWaiter = nil }
     func peripheral(_ p: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard error == nil, characteristic.uuid == PKEProtocol.tx, let data = characteristic.value, let chunk = String(data: data, encoding: .ascii) else { return }
+        guard error == nil, characteristic.uuid == PKEProtocol.tx, let data = characteristic.value, let chunk = String(data: data, encoding: .ascii) else { if let error { log("notification error: \(error.localizedDescription)") }; return }
         buffer += chunk
         while let end = buffer.firstIndex(of: "#") {
             let frame = String(buffer[...end]); buffer = String(buffer[buffer.index(after: end)...])
             let parts = frame.components(separatedBy: ",")
-            guard parts.first == "*AT", parts.contains(expectedReply), parts.contains(expectedCode) else { continue }
+            guard parts.first == "*AT", parts.contains(expectedReply), parts.contains(expectedCode) else { log("ignored unmatched response frame (contents redacted)"); continue }
+            log("expected response received (contents redacted)")
             continuation?.resume(returning: frame); continuation = nil
         }
     }
