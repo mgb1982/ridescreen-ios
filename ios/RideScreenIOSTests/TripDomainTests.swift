@@ -2,6 +2,21 @@ import XCTest
 @testable import RideScreenIOS
 
 final class TripProcessorTests: XCTestCase {
+    func testPKEReadFramesAndReplyParsing() {
+        XCTAssertEqual(String(data: PKEProtocol.frame(code: "placeholder", command: "008"), encoding: .utf8), "*BT,placeholder,10,008#")
+        XCTAssertEqual(PKEProtocol.voltage("*AT,redacted,10,008,01020304,126,0#"), 12.6)
+        XCTAssertEqual(PKEProtocol.challenge("*AT,redacted,10,008,01020304,126,0#"), Data([1, 2, 3, 4]))
+        XCTAssertEqual(PKEProtocol.locked("*AT,redacted,10,001,7,1#"), true)
+        XCTAssertEqual(PKEProtocol.locked("*AT,redacted,10,001,7,2#"), false)
+        XCTAssertNil(PKEProtocol.locked("*AT,redacted,10,001,1,1#"))
+    }
+
+    func testPKERejectsMalformedCredentialAndChallenge() {
+        XCTAssertFalse(PKEProtocol.validMcuID("not-a-device-id"))
+        XCTAssertNil(PKEProtocol.challenge("*AT,redacted,10,008,not-hex,126,0#"))
+        XCTAssertNil(PKEProtocol.derive(code: "placeholder", mcuID: "not-a-device-id", challenge: Data([1, 2, 3, 4])))
+    }
+
     func testRejectsInvalidAccuracyAndStaleFixes() {
         let now = Date(timeIntervalSince1970: 1_000)
         XCTAssertEqual(GPSFixFilter.rejectionReason(for: fix(now, accuracy: -1), now: now), .invalidAccuracy)
@@ -160,3 +175,4 @@ final class TripStatsTests: XCTestCase {
         )
     }
 }
+
