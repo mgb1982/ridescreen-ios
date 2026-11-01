@@ -43,7 +43,7 @@ final class TripRecordingViewModel: ObservableObject {
     let locationService = TripLocationService()
 
     private let store = TripJournalStore()
-    private let diagnostics = TripDiagnosticsLogger()
+    private let diagnostics = TripDiagnosticsLogger.shared
     private var tracker: TripTracker?
     private var activeTripID: String?
     private var persistenceTask: Task<Void, Never>?
@@ -393,3 +393,4 @@ final class TripRecordingViewModel: ObservableObject {
         await logAsync("Application termination callback received")
     }
 }
+
