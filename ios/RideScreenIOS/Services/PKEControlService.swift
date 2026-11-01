@@ -168,6 +168,11 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     }
     private func write(_ data: Data) async throws {
         guard let p = peripheral, let c = writeChar else { throw PKEError.noLink }
+        if c.properties.contains(.writeWithoutResponse) && !c.properties.contains(.write) {
+            guard p.canSendWriteWithoutResponse else { throw PKEError.noLink }
+            p.writeValue(data, for: c, type: .withoutResponse)
+            return
+        }
         guard c.properties.contains(.write) else { throw PKEError.noLink }
         try await withCheckedThrowingContinuation { (w: CheckedContinuation<Void, Error>) in
             continuation = nil; writeWaiter = w; p.writeValue(data, for: c, type: .withResponse)
@@ -186,7 +191,8 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     func centralManager(_ central: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? p.name ?? "").uppercased()
         let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] ?? [:]
-        let advertHex = serviceData.values.map { $0.map { String(format: "%02X", $0) }.joined() }.joined()
+        let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data ?? Data()
+        let advertHex = (Array(serviceData.values) + [manufacturerData]).map { $0.map { String(format: "%02X", $0) }.joined() }.joined()
         guard name.contains(expectedCode) || name == "PKE-" + expectedCode.suffix(4) || advertHex.contains(expectedCode) else { return }
         central.stopScan(); scanWaiter?.resume(returning: p); scanWaiter = nil
     }
