@@ -82,10 +82,15 @@ struct TripTracker: Sendable {
         }
 
         let reportedSpeed = fix.speedMetersPerSecond
-        let reportedIsPlausible = reportedSpeed.isFinite
+        let reportedIsPlausible = previous != nil
+            && reportedSpeed.isFinite
             && reportedSpeed >= 0
             && reportedSpeed <= Self.maximumPlausibleSpeedMetersPerSecond
-        let speed = reportedIsPlausible ? reportedSpeed : impliedSpeed
+        // Core Location can report a large stale/noisy speed on the first fix or while stationary.
+        // Require movement between consecutive accepted coordinates before showing its raw speed.
+        let speed = reportedIsPlausible && impliedSpeed >= Self.minimumMovingSpeedMetersPerSecond
+            ? reportedSpeed
+            : impliedSpeed
 
         let point = TripPoint(fix: fix, speedMetersPerSecond: speed)
         let distanceAdded = speed >= Self.minimumMovingSpeedMetersPerSecond ? segmentDistance : 0
@@ -123,3 +128,4 @@ struct TripTracker: Sendable {
         return result
     }
 }
+

@@ -22,6 +22,7 @@ struct HomeScreen: View {
                 VStack(alignment: .leading, spacing: 14) {
                     RideScreenHeader(eyebrow: "tab.home")
                     hero
+                    PKEControlsCard(location: viewModel.locationService)
                     liveSection
                     tripsCard
                     HStack(alignment: .top, spacing: 12) {
@@ -234,7 +235,7 @@ struct HomeScreen: View {
                         Text(latest.startedAt.formatted(date: .abbreviated, time: .shortened))
                             .font(RideFont.semiBold(14))
                             .foregroundStyle(RideBrand.text)
-                        Text("\(Self.kmText(latest.distanceMeters)) km · \(Self.duration(latest.elapsedDuration))")
+                        Text("\(Self.kmText(TripGeometry.resolvedDistance(stored: latest.distanceMeters, points: latest.points))) km · \(Self.duration(latest.elapsedDuration))")
                             .font(RideFont.regular(12))
                             .foregroundStyle(RideBrand.secondary)
                     }
@@ -309,6 +310,89 @@ struct HomeScreen: View {
     static func duration(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds).rounded())
         return String(format: "%02d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
+    }
+}
+
+private struct PKEControlsCard: View {
+    @ObservedObject var location: TripLocationService
+    @StateObject private var pke = PKEControlService()
+    @State private var showSetup = false
+    @State private var showAccessoryConfirmation = false
+    @State private var pendingAccessory: PKEAction = .seat
+    @State private var code = ""
+    @State private var mcuID = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("PKE") .font(RideFont.extraBold(12)).foregroundStyle(RideBrand.text)
+                Spacer()
+                Button("Ajustes") { code = PKECredentials.get("code") ?? ""; mcuID = PKECredentials.get("mcuid") ?? ""; showSetup = true }
+                    .font(RideFont.semiBold(12)).foregroundStyle(RideBrand.gold)
+            }
+            HStack(spacing: 16) {
+                Label(pke.voltage.map { String(format: "%.1f V", $0) } ?? "— V", systemImage: "battery.100")
+                Label(pke.locked == nil ? "Estado —" : (pke.locked! ? "Bloqueada" : "Desbloqueada"), systemImage: "lock")
+                Spacer()
+                Button { Task { await pke.refresh() } } label: { Image(systemName: "arrow.clockwise") }
+                    .disabled(pke.status.contains("Conectando"))
+            }
+            HStack(spacing: 8) {
+                actionButton(.unlock)
+                actionButton(.lock)
+                actionButton(.seat)
+                actionButton(.fuel)
+            }
+            Text(pke.status).font(RideFont.regular(11)).foregroundStyle(RideBrand.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
+        .onAppear { location.startSafetyMonitoring() }
+        .onDisappear { location.stopSafetyMonitoring() }
+        .confirmationDialog("¿Confirmas abrir este accesorio?", isPresented: $showAccessoryConfirmation, titleVisibility: .visible) {
+            Button(pendingAccessory.title) { Task { await pke.execute(pendingAccessory, speedKmh: location.freshSpeedKmh()) } }
+            Button("Cancelar", role: .cancel) {}
+        }
+        .sheet(isPresented: $showSetup) {
+            NavigationStack {
+                Form {
+                    Section("Credenciales PKE") {
+                        TextField("Código PKE", text: $code).keyboardType(.numberPad).textContentType(.none)
+                        SecureField("McuID (32 caracteres hex)" , text: $mcuID).textInputAutocapitalization(.characters).autocorrectionDisabled()
+                    }
+                    Section { Text("Se guardan solo en este iPhone y no se escriben en los registros.") }
+                }
+                .navigationTitle("Configurar PKE")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { showSetup = false } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Guardar") {
+                            let cleanCode = code.filter(\.isNumber)
+                            let cleanID = mcuID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+                            guard cleanCode.count >= 8, PKEProtocol.validMcuID(cleanID) else { pke.status = "Revisa el código PKE y el McuID"; return }
+                            PKECredentials.set(cleanCode, account: "code"); PKECredentials.set(cleanID, account: "mcuid"); showSetup = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+    }
+
+    private func actionButton(_ action: PKEAction) -> some View {
+        Button {
+            if action == .seat || action == .fuel { pendingAccessory = action; showAccessoryConfirmation = true }
+            else if action == .lock && location.authorizationStatus == .notDetermined {
+                location.requestWhenInUseAuthorization()
+            } else { Task { await pke.execute(action, speedKmh: location.freshSpeedKmh()) } }
+        } label: {
+            Text(action.title).font(RideFont.semiBold(10)).lineLimit(1).minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain).foregroundStyle(RideBrand.text)
+        .disabled(pke.status.contains("Conectando"))
     }
 }
 
@@ -446,3 +530,4 @@ struct BikeEditorSheet: View {
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
     }
 }
+
