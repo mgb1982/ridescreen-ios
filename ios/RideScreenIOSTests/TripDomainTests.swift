@@ -52,8 +52,10 @@ final class TripProcessorTests: XCTestCase {
 
     func testAccumulatesDistanceAndTracksMaximumSpeed() {
         var tracker = TripTracker(startedAt: Date(timeIntervalSince1970: 100))
+        let startingFix = fix(Date(timeIntervalSince1970: 100), speed: 0)
+        _ = tracker.ingest(startingFix, now: startingFix.timestamp, segmentDistanceMeters: 0)
         for (index, speed) in [3.0, 10.0, 6.0].enumerated() {
-            let date = Date(timeIntervalSince1970: 100 + Double(index + 1))
+            let date = Date(timeIntervalSince1970: 101 + Double(index))
             _ = tracker.ingest(fix(date, speed: speed), now: date, segmentDistanceMeters: 5)
         }
         XCTAssertEqual(tracker.trip.distanceMeters, 15, accuracy: 0.001)
