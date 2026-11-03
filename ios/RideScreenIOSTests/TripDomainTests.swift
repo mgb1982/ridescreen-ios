@@ -11,6 +11,23 @@ final class TripProcessorTests: XCTestCase {
         XCTAssertNil(PKEProtocol.locked("*AT,redacted,10,001,1,1#"))
     }
 
+    /// Synthetic McuID/code (not a real bike). Expected values were computed with an independent
+    /// AES-128/ECB implementation following Android's PkeUnlock.derive (same key, XOR of the last
+    /// four bytes with the challenge, 15-byte zero-padded code block).
+    func testPKEDeriveKnownVectorMatchesAndroidAlgorithm() {
+        let mcu = "00112233445566778899AABBCCDDEEFF"
+        let challenge = Data([1, 2, 3, 4])
+        let cipher = PKEProtocol.derive(code: "12345678", mcuID: mcu, challenge: challenge)
+        XCTAssertEqual(cipher?.map { String(format: "%02X", $0) }.joined(), "64CC87EC467F68388B397F9041A30202")
+        // Codes longer than 15 bytes are truncated to 15, like on Android.
+        let long = PKEProtocol.derive(code: "1234567890123456789", mcuID: mcu, challenge: challenge)
+        XCTAssertEqual(long?.map { String(format: "%02X", $0) }.joined(), "9EFCDBFC16462E8F7A74317E21405559")
+        XCTAssertEqual(
+            String(data: PKEProtocol.actionFrame(code: "12345678", action: .unlock, cipher: cipher!), encoding: .utf8),
+            "*BT,12345678,10,001,2,64CC87EC467F68388B397F9041A30202#"
+        )
+    }
+
     func testPKERejectsMalformedCredentialAndChallenge() {
         XCTAssertFalse(PKEProtocol.validMcuID("not-a-device-id"))
         XCTAssertNil(PKEProtocol.challenge("*AT,redacted,10,008,not-hex,126,0#"))

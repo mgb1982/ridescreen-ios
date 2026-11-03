@@ -8,7 +8,7 @@ enum PKEAction: String, CaseIterable, Identifiable {
     case lock = "1", unlock = "2", fuel = "5", seat = "6"
     var id: String { rawValue }
     var title: String {
-        switch self { case .lock: "Bloquear"; case .unlock: "Desbloquear"; case .fuel: "Abrir depÃ³sito"; case .seat: "Abrir asiento" }
+        switch self { case .lock: String(localized: "pke.action.lock"); case .unlock: String(localized: "pke.action.unlock"); case .fuel: String(localized: "pke.action.fuel"); case .seat: String(localized: "pke.action.seat") }
     }
 }
 
@@ -90,11 +90,12 @@ enum PKECredentials {
         guard SecItemCopyMatching(q as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
-    static func set(_ value: String, account: String) {
+    @discardableResult
+    static func set(_ value: String, account: String) -> Bool {
         let q: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
         SecItemDelete(q as CFDictionary)
         var item = q; item[kSecValueData as String] = Data(value.utf8); item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        SecItemAdd(item as CFDictionary, nil)
+        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }
 }
 
@@ -102,7 +103,8 @@ enum PKECredentials {
 final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
     @Published private(set) var voltage: Double?
     @Published private(set) var locked: Bool?
-    @Published var status = "Configura el PKE para empezar"
+    @Published var status = String(localized: "pke.status.initial")
+    @Published private(set) var isBusy = false
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var writeChar: CBCharacteristic?
@@ -123,10 +125,12 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     override init() { super.init(); central = CBCentralManager(delegate: self, queue: .main) }
     func refresh() async { await run { try await self.readStatus() } }
     func execute(_ action: PKEAction, speedKmh: Double?) async {
-        if action == .lock && (speedKmh == nil || speedKmh! > 3) { status = "No se bloquea: falta velocidad GPS reciente o supera 3 km/h"; return }
+        if action == .lock && (speedKmh == nil || speedKmh! > 3) { status = String(localized: "pke.status.lockBlocked"); return }
         await run { try await self.send(action) }
     }
     private func run(_ operation: @escaping () async throws -> Void) async {
+        guard !isBusy else { return }
+        isBusy = true; defer { isBusy = false }
         do { try await operation() } catch { log("operation failed: \(error.localizedDescription)"); status = error.localizedDescription }
     }
     private func credentials() throws -> (String, String) {
@@ -136,7 +140,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     }
     private func readStatus() async throws {
         log("battery/status refresh started")
-        let (code, _) = try credentials(); status = "Conectando con la cajaâ€¦"
+        let (code, _) = try credentials(); status = String(localized: "pke.status.connecting")
         try await open(code: code)
         defer { close() }
         let reply = try await ask(code: code, command: "008")
@@ -144,11 +148,11 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         let state = try await ask(code: code, command: "001,7")
         locked = PKEProtocol.locked(state)
         guard voltage != nil || locked != nil else { throw PKEError.badReply }
-        status = "Conectado"
+        status = String(localized: "pke.status.connected")
     }
     private func send(_ action: PKEAction) async throws {
-        log("action started: \(action.title)")
-        let (code, mcu) = try credentials(); status = "Conectando con la cajaâ€¦"
+        log("action started: \(action.rawValue)")
+        let (code, mcu) = try credentials(); status = String(localized: "pke.status.connecting")
         try await open(code: code); defer { close() }
         let challengeReply = try await ask(code: code, command: "008")
         voltage = PKEProtocol.voltage(challengeReply)
@@ -164,7 +168,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
             if expectedState == nil { break }
             if attempt < attempts - 1 { log("action state not confirmed yet; checking again") }
         }
-        status = action == .lock && locked != true ? "La caja no confirmÃ³ el bloqueo" : (action == .unlock && locked != false ? "La caja no confirmÃ³ el desbloqueo" : "Orden enviada Â· estado actualizado")
+        status = action == .lock && locked != true ? String(localized: "pke.status.lockNotConfirmed") : (action == .unlock && locked != false ? String(localized: "pke.status.unlockNotConfirmed") : String(localized: "pke.status.sent"))
     }
     private func open(code: String) async throws {
         expectedCode = code
@@ -238,7 +242,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         if let p = peripheral { central.cancelPeripheralConnection(p) }
         peripheral = nil; writeChar = nil; notifyChar = nil; buffer = ""
     }
-    func centralManagerDidUpdateState(_ central: CBCentralManager) { if central.state != .poweredOn { status = "Bluetooth no disponible" } }
+    func centralManagerDidUpdateState(_ central: CBCentralManager) { if central.state != .poweredOn { status = String(localized: "pke.status.btUnavailable") } }
     func centralManager(_ central: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? p.name ?? "").uppercased()
         let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] ?? [:]
@@ -281,6 +285,16 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
 
 enum PKEError: LocalizedError {
     case missingCredentials, bluetoothOff, notFound, noLink, timeout, badReply, busy
-    var errorDescription: String? { switch self { case .missingCredentials: "Configura el cÃ³digo PKE y el McuID"; case .bluetoothOff: "Activa Bluetooth"; case .notFound: "No se encontrÃ³ la caja PKE"; case .noLink: "No se pudo conectar con la caja"; case .timeout: "La caja no respondiÃ³"; case .badReply: "Respuesta PKE no vÃ¡lida"; case .busy: "Hay otra comunicaciÃ³n PKE en curso" } }
+    var errorDescription: String? {
+        switch self {
+        case .missingCredentials: String(localized: "pke.error.missingCredentials")
+        case .bluetoothOff: String(localized: "pke.error.bluetoothOff")
+        case .notFound: String(localized: "pke.error.notFound")
+        case .noLink: String(localized: "pke.error.noLink")
+        case .timeout: String(localized: "pke.error.timeout")
+        case .badReply: String(localized: "pke.error.badReply")
+        case .busy: String(localized: "pke.error.busy")
+        }
+    }
 }
 

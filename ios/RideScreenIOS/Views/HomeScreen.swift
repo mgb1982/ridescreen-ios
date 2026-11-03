@@ -327,15 +327,15 @@ private struct PKEControlsCard: View {
             HStack {
                 Text("PKE") .font(RideFont.extraBold(12)).foregroundStyle(RideBrand.text)
                 Spacer()
-                Button("Ajustes") { code = PKECredentials.get("code") ?? ""; mcuID = PKECredentials.get("mcuid") ?? ""; showSetup = true }
+                Button("pke.settings") { code = PKECredentials.get("code") ?? ""; mcuID = PKECredentials.get("mcuid") ?? ""; showSetup = true }
                     .font(RideFont.semiBold(12)).foregroundStyle(RideBrand.gold)
             }
             HStack(spacing: 16) {
                 Label(pke.voltage.map { String(format: "%.1f V", $0) } ?? "— V", systemImage: "battery.100")
-                Label(pke.locked == nil ? "Estado —" : (pke.locked! ? "Bloqueada" : "Desbloqueada"), systemImage: "lock")
+                Label(pke.locked == nil ? LocalizedStringKey("pke.state.unknown") : (pke.locked! ? LocalizedStringKey("pke.state.locked") : LocalizedStringKey("pke.state.unlocked")), systemImage: "lock")
                 Spacer()
                 Button { Task { await pke.refresh() } } label: { Image(systemName: "arrow.clockwise") }
-                    .disabled(pke.status.contains("Conectando"))
+                    .disabled(pke.isBusy)
             }
             HStack(spacing: 8) {
                 actionButton(.unlock)
@@ -350,28 +350,29 @@ private struct PKEControlsCard: View {
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
         .onAppear { location.startSafetyMonitoring() }
         .onDisappear { location.stopSafetyMonitoring() }
-        .confirmationDialog("¿Confirmas abrir este accesorio?", isPresented: $showAccessoryConfirmation, titleVisibility: .visible) {
+        .confirmationDialog("pke.confirm.title", isPresented: $showAccessoryConfirmation, titleVisibility: .visible) {
             Button(pendingAccessory.title) { Task { await pke.execute(pendingAccessory, speedKmh: location.freshSpeedKmh()) } }
-            Button("Cancelar", role: .cancel) {}
+            Button("pke.cancel", role: .cancel) {}
         }
         .sheet(isPresented: $showSetup) {
             NavigationStack {
                 Form {
-                    Section("Credenciales PKE") {
-                        TextField("Código PKE", text: $code).keyboardType(.numberPad).textContentType(.none)
-                        SecureField("McuID (32 caracteres hex)" , text: $mcuID).textInputAutocapitalization(.characters).autocorrectionDisabled()
+                    Section("pke.setup.section") {
+                        SecureField("pke.setup.code", text: $code).keyboardType(.numberPad).textContentType(.none)
+                        SecureField("pke.setup.mcu", text: $mcuID).textInputAutocapitalization(.characters).autocorrectionDisabled()
                     }
-                    Section { Text("Se guardan solo en este iPhone y no se escriben en los registros.") }
+                    Section { Text("pke.setup.note") }
                 }
-                .navigationTitle("Configurar PKE")
+                .navigationTitle("pke.setup.title")
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { showSetup = false } }
+                    ToolbarItem(placement: .cancellationAction) { Button("pke.cancel") { showSetup = false } }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Guardar") {
+                        Button("pke.save") {
                             let cleanCode = code.filter(\.isNumber)
                             let cleanID = mcuID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-                            guard cleanCode.count >= 8, PKEProtocol.validMcuID(cleanID) else { pke.status = "Revisa el código PKE y el McuID"; return }
-                            PKECredentials.set(cleanCode, account: "code"); PKECredentials.set(cleanID, account: "mcuid"); showSetup = false
+                            guard cleanCode.count >= 8, PKEProtocol.validMcuID(cleanID) else { pke.status = String(localized: "pke.status.checkCredentials"); return }
+                            guard PKECredentials.set(cleanCode, account: "code"), PKECredentials.set(cleanID, account: "mcuid") else { pke.status = String(localized: "pke.status.saveFailed"); return }
+                            showSetup = false
                         }
                     }
                 }
@@ -392,7 +393,7 @@ private struct PKEControlsCard: View {
                 .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain).foregroundStyle(RideBrand.text)
-        .disabled(pke.status.contains("Conectando"))
+        .disabled(pke.isBusy)
     }
 }
 
