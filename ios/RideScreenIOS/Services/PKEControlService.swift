@@ -230,11 +230,23 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
             return
         }
         guard c.properties.contains(.write) else { throw PKEError.noLink }
+        // Do NOT touch `continuation` here: it holds the pending reply waiter set by exchange().
+        // Clearing it would drop the box's reply and hang the operation forever.
         try await withCheckedThrowingContinuation { (w: CheckedContinuation<Void, Error>) in
-            continuation = nil; writeWaiter = w; p.writeValue(data, for: c, type: .withResponse)
+            let id = UUID()
+            writeWaiter = w; writeWaiterID = id
+            p.writeValue(data, for: c, type: .withResponse)
+            Task {
+                try? await Task.sleep(for: .seconds(6))
+                if self.writeWaiterID == id, let waiter = self.writeWaiter {
+                    self.writeWaiter = nil
+                    waiter.resume(throwing: PKEError.timeout)
+                }
+            }
         }
     }
     private var writeWaiter: CheckedContinuation<Void, Error>?
+    private var writeWaiterID: UUID?
     private var expectedReply = ""
     private func close() {
         if continuation != nil { failPendingReply(PKEError.noLink) }

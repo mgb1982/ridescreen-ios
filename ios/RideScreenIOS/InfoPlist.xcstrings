@@ -46,6 +46,29 @@
           }
         }
       }
+    },
+    "NSBluetoothAlwaysUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen usa Bluetooth para leer la batería y controlar la caja PKE de tu moto cuando lo solicitas."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen fa servir el Bluetooth per llegir la bateria i controlar la caixa PKE de la teva moto quan ho demanes."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen uses Bluetooth to read the battery and control your bike's PKE box when you ask it to."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
