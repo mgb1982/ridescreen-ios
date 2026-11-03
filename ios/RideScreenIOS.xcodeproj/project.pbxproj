@@ -34,6 +34,8 @@
 		A10000000000000000000012 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* Assets.xcassets */; };
 
 		A10000000000000000000001 /* RideScreenIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* RideScreenIOSApp.swift */; };
+		B20000000000000000000001 /* SampleHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* SampleHandler.swift */; };
+		B20000000000000000000003 /* RideScreenBroadcast.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* RideScreenBroadcast.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +69,9 @@
 
 		A10000000000000000000002 /* RideScreenIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RideScreenIOSApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000003 /* RideScreenIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RideScreenIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B20000000000000000000002 /* SampleHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleHandler.swift; sourceTree = "<group>"; };
+		B20000000000000000000004 /* BroadcastInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BroadcastInfo.plist; sourceTree = "<group>"; };
+		B20000000000000000000006 /* RideScreenBroadcast.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = RideScreenBroadcast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +128,7 @@
 				A10000000000000000000006 /* RideScreenIOS */,
 				B10000000000000000000021 /* RideScreenIOSTests */,
 				A10000000000000000000007 /* Products */,
+				B20000000000000000000007 /* RideScreenBroadcastExtension */,
 			);
 			sourceTree = "<group>";
 		};
@@ -160,10 +166,12 @@
 			children = (
 				A10000000000000000000003 /* RideScreenIOS.app */,
 				B1000000000000000000000B /* RideScreenIOSTests.xctest */,
+				B20000000000000000000006 /* RideScreenBroadcast.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
+		B20000000000000000000007 /* RideScreenBroadcastExtension */ = {isa = PBXGroup; children = (B20000000000000000000002 /* SampleHandler.swift */, B20000000000000000000004 /* BroadcastInfo.plist */, ); path = RideScreenBroadcastExtension; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -175,9 +183,10 @@
 				A1000000000000000000000A /* Sources */,
 				A10000000000000000000004 /* Frameworks */,
 				A1000000000000000000000B /* Resources */,
+				B20000000000000000000008 /* Embed App Extensions */,
 			);
 			buildRules = ();
-			dependencies = ();
+			dependencies = (B20000000000000000000012 /* PBXTargetDependency */, );
 			name = RideScreenIOS;
 			productName = RideScreenIOS;
 			productReference = A10000000000000000000003 /* RideScreenIOS.app */;
@@ -192,6 +201,7 @@
 			remoteGlobalIDString = A10000000000000000000008;
 			remoteInfo = RideScreenIOS;
 		};
+		B20000000000000000000011 /* Extension target proxy */ = {isa = PBXContainerItemProxy; containerPortal = A1000000000000000000000C /* Project object */; proxyType = 1; remoteGlobalIDString = B20000000000000000000009; remoteInfo = RideScreenBroadcastExtension; };
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXTargetDependency section */
@@ -200,6 +210,7 @@
 			target = A10000000000000000000008 /* RideScreenIOS */;
 			targetProxy = B10000000000000000000010 /* PBXContainerItemProxy */;
 		};
+		B20000000000000000000012 /* Extension target dependency */ = {isa = PBXTargetDependency; target = B20000000000000000000009 /* RideScreenBroadcastExtension */; targetProxy = B20000000000000000000011 /* Extension target proxy */; };
 /* End PBXTargetDependency section */
 
 /* Begin PBXNativeTarget section addition */
@@ -218,20 +229,27 @@
 			productReference = B1000000000000000000000B /* RideScreenIOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		B20000000000000000000009 /* RideScreenBroadcastExtension */ = {isa = PBXNativeTarget; buildConfigurationList = B20000000000000000000010 /* Broadcast config list */; buildPhases = (B2000000000000000000000B /* Sources */, B2000000000000000000000C /* Frameworks */, B2000000000000000000000D /* Resources */, ); buildRules = (); dependencies = (); name = RideScreenBroadcastExtension; productName = RideScreenBroadcastExtension; productReference = B20000000000000000000006 /* RideScreenBroadcast.appex */; productType = "com.apple.product-type.app-extension"; };
 /* End PBXNativeTarget section addition */
 
 /* Begin PBXSourcesBuildPhase section addition */
 		B10000000000000000000022 /* RideScreenIOSTests Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000009 /* TripDomainTests.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		B2000000000000000000000B /* Broadcast Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B20000000000000000000001 /* SampleHandler.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section addition */
 
 /* Begin PBXFrameworksBuildPhase section addition */
 		B10000000000000000000023 /* RideScreenIOSTests Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000012 /* XCTest.framework in Frameworks */, ); runOnlyForDeploymentPostprocessing = 0; };
+		B2000000000000000000000C /* Broadcast Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section addition */
 
 /* Begin PBXResourcesBuildPhase section addition */
 		B10000000000000000000024 /* RideScreenIOSTests Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		B2000000000000000000000D /* Broadcast Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section addition */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		B20000000000000000000008 /* Embed App Extensions */ = {isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (B20000000000000000000003 /* RideScreenBroadcast.appex in Embed App Extensions */, ); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXCopyFilesBuildPhase section */
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -246,7 +264,8 @@
 					};
 					B1000000000000000000000C = {
 						CreatedOnToolsVersion = 16.4;
-					};
+				};
+					B20000000000000000000009 = {CreatedOnToolsVersion = 16.4;};
 				};
 			};
 			buildConfigurationList = A1000000000000000000000D /* Build configuration list for PBXProject "RideScreenIOS" */;
@@ -261,6 +280,7 @@
 			targets = (
 				A10000000000000000000008 /* RideScreenIOS */,
 				B1000000000000000000000C /* RideScreenIOSTests */,
+				B20000000000000000000009 /* RideScreenBroadcastExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -408,6 +428,8 @@
 			name = Release;
 		};
 
+		B2000000000000000000000E /* Debug broadcast target */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = RideScreenBroadcastExtension/BroadcastInfo.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.mgb1982.RideScreenIOS.BroadcastExtension; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
+		B2000000000000000000000F /* Release broadcast target */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = RideScreenBroadcastExtension/BroadcastInfo.plist; IPHONEOS_DEPLOYMENT_TARGET = 16.0; PRODUCT_BUNDLE_IDENTIFIER = com.mgb1982.RideScreenIOS.BroadcastExtension; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -440,6 +462,7 @@
 			defaultConfigurationName = Debug;
 		};
 
+		B20000000000000000000010 /* Broadcast config list */ = {isa = XCConfigurationList; buildConfigurations = (B2000000000000000000000E /* Debug broadcast target */, B2000000000000000000000F /* Release broadcast target */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = A1000000000000000000000C /* Project object */;
