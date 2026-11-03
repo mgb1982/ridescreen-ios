@@ -24,10 +24,10 @@ This is a custom EasyConn/PXC stream, not AirPlay. A ReplayKit picker or capture
 
 ## Implementation milestones
 
-1. Add a ReplayKit broadcast extension and an explicit RideScreen entry point. Verify that the extension starts only after system consent and receives screen sample buffers without persisting them.
-2. Port EasyConn discovery and PXC control/media state to Swift. Keep the extension in charge of the long-lived background stream; share only connection settings and stream state with the app.
-3. Encode ReplayKit video samples as H.264 Annex-B at the canvas size requested by the dash. Handle keyframes, SPS/PPS, pull cadence, back-pressure, stop, and reconnect.
-4. Validate on an iPhone and the Zontes display: start, switch to another app, confirm the image and touch behavior, stop, and confirm the stream ends cleanly.
+1. **Capture foundation (implemented):** a ReplayKit broadcast extension and an explicit home-screen picker are in place. The handler receives approved video samples, counts them for bounded diagnostics, and discards the image data. It does not yet send video to the dash.
+2. **Wire format foundation (implemented):** `PXCWireCodec.swift` handles the 16-byte control header, the 8-byte media header, and raw length-prefixed H.264 frame responses. It is not connected to network sockets yet.
+3. **Connection and session (pending):** port EasyConn discovery, listener setup, PXC control handshake, media request handling, reconnect, and permissions/network behavior.
+4. **Video and validation (pending):** encode ReplayKit samples as H.264 Annex-B at the canvas size requested by the dash, including keyframes/SPS/PPS, pull cadence, and back-pressure; then test on an iPhone and the Zontes display.
 
 ## Acceptance criteria
 
