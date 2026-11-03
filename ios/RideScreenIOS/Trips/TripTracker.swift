@@ -82,10 +82,21 @@ struct TripTracker: Sendable {
         }
 
         let reportedSpeed = fix.speedMetersPerSecond
-        let reportedIsPlausible = reportedSpeed.isFinite
+        let reportedIsValid = reportedSpeed.isFinite
             && reportedSpeed >= 0
             && reportedSpeed <= Self.maximumPlausibleSpeedMetersPerSecond
-        let speed = reportedIsPlausible ? reportedSpeed : impliedSpeed
+        // A single cold-start GPS speed can be wildly wrong. After the first fix, also require
+        // the reported speed to agree with movement between these two accepted coordinates.
+        let reportedMatchesMovement = reportedIsValid
+            && previous != nil
+            && impliedSpeed >= Self.minimumMovingSpeedMetersPerSecond
+            && abs(reportedSpeed - impliedSpeed) <= max(5, reportedSpeed * 0.5)
+        let speed: Double
+        if reportedIsValid {
+            speed = reportedMatchesMovement ? reportedSpeed : currentSpeedMetersPerSecond
+        } else {
+            speed = impliedSpeed
+        }
 
         let point = TripPoint(fix: fix, speedMetersPerSecond: speed)
         let distanceAdded = speed >= Self.minimumMovingSpeedMetersPerSecond ? segmentDistance : 0
@@ -123,3 +134,4 @@ struct TripTracker: Sendable {
         return result
     }
 }
+

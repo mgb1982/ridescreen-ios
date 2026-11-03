@@ -5,6 +5,7 @@ import Foundation
 @MainActor
 final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var authorizationStatus: CLAuthorizationStatus
+    @Published private(set) var latestSpeedKmh: Double?
 
     var onLocation: ((GPSFix, Double?) -> Bool)?
     var onAuthorizationChanged: ((CLAuthorizationStatus) -> Void)?
@@ -12,6 +13,8 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
 
     private let manager: CLLocationManager
     private var lastAcceptedLocation: CLLocation?
+    private var latestLocation: CLLocation?
+    private var safetyMonitoring = false
 
     override init() {
         manager = CLLocationManager()
@@ -47,10 +50,31 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func stopUpdating() {
-        manager.stopUpdatingLocation()
+        if !safetyMonitoring { manager.stopUpdatingLocation() }
         manager.allowsBackgroundLocationUpdates = false
         manager.showsBackgroundLocationIndicator = false
         lastAcceptedLocation = nil
+    }
+
+    func startSafetyMonitoring() {
+        guard authorizationStatus == .authorizedAlways || authorizationStatus == .authorizedWhenInUse else { return }
+        safetyMonitoring = true
+        manager.allowsBackgroundLocationUpdates = false
+        manager.showsBackgroundLocationIndicator = false
+        manager.startUpdatingLocation()
+    }
+
+    func stopSafetyMonitoring() {
+        safetyMonitoring = false
+        guard !manager.allowsBackgroundLocationUpdates else { return }
+        manager.stopUpdatingLocation()
+    }
+
+    func freshSpeedKmh(maxAge: TimeInterval = 10, now: Date = Date()) -> Double? {
+        guard let latestLocation, now.timeIntervalSince(latestLocation.timestamp) <= maxAge,
+              latestLocation.speed >= 0, latestLocation.horizontalAccuracy >= 0,
+              latestLocation.horizontalAccuracy <= 50 else { return nil }
+        return latestLocation.speed * 3.6
     }
 
     func restorePreviousPoint(_ point: TripPoint?) {
@@ -76,6 +100,9 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for location in locations {
+            latestLocation = location
+            latestSpeedKmh = location.speed >= 0 && location.horizontalAccuracy >= 0 && location.horizontalAccuracy <= 50
+                ? location.speed * 3.6 : nil
             let fix = GPSFix(
                 latitude: location.coordinate.latitude,
                 longitude: location.coordinate.longitude,
@@ -95,3 +122,4 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
         onError?(error.localizedDescription)
     }
 }
+

@@ -2,6 +2,38 @@ import XCTest
 @testable import RideScreenIOS
 
 final class TripProcessorTests: XCTestCase {
+    func testPKEReadFramesAndReplyParsing() {
+        XCTAssertEqual(String(data: PKEProtocol.frame(code: "placeholder", command: "008"), encoding: .utf8), "*BT,placeholder,10,008#")
+        XCTAssertEqual(PKEProtocol.voltage("*AT,redacted,10,008,01020304,126,0#"), 12.6)
+        XCTAssertEqual(PKEProtocol.challenge("*AT,redacted,10,008,01020304,126,0#"), Data([1, 2, 3, 4]))
+        XCTAssertEqual(PKEProtocol.locked("*AT,redacted,10,001,7,1#"), true)
+        XCTAssertEqual(PKEProtocol.locked("*AT,redacted,10,001,7,2#"), false)
+        XCTAssertNil(PKEProtocol.locked("*AT,redacted,10,001,1,1#"))
+    }
+
+    /// Synthetic McuID/code (not a real bike). Expected values were computed with an independent
+    /// AES-128/ECB implementation following Android's PkeUnlock.derive (same key, XOR of the last
+    /// four bytes with the challenge, 15-byte zero-padded code block).
+    func testPKEDeriveKnownVectorMatchesAndroidAlgorithm() {
+        let mcu = "00112233445566778899AABBCCDDEEFF"
+        let challenge = Data([1, 2, 3, 4])
+        let cipher = PKEProtocol.derive(code: "12345678", mcuID: mcu, challenge: challenge)
+        XCTAssertEqual(cipher?.map { String(format: "%02X", $0) }.joined(), "64CC87EC467F68388B397F9041A30202")
+        // Codes longer than 15 bytes are truncated to 15, like on Android.
+        let long = PKEProtocol.derive(code: "1234567890123456789", mcuID: mcu, challenge: challenge)
+        XCTAssertEqual(long?.map { String(format: "%02X", $0) }.joined(), "9EFCDBFC16462E8F7A74317E21405559")
+        XCTAssertEqual(
+            String(data: PKEProtocol.actionFrame(code: "12345678", action: .unlock, cipher: cipher!), encoding: .utf8),
+            "*BT,12345678,10,001,2,64CC87EC467F68388B397F9041A30202#"
+        )
+    }
+
+    func testPKERejectsMalformedCredentialAndChallenge() {
+        XCTAssertFalse(PKEProtocol.validMcuID("not-a-device-id"))
+        XCTAssertNil(PKEProtocol.challenge("*AT,redacted,10,008,not-hex,126,0#"))
+        XCTAssertNil(PKEProtocol.derive(code: "placeholder", mcuID: "not-a-device-id", challenge: Data([1, 2, 3, 4])))
+    }
+
     func testRejectsInvalidAccuracyAndStaleFixes() {
         let now = Date(timeIntervalSince1970: 1_000)
         XCTAssertEqual(GPSFixFilter.rejectionReason(for: fix(now, accuracy: -1), now: now), .invalidAccuracy)
@@ -37,8 +69,10 @@ final class TripProcessorTests: XCTestCase {
 
     func testAccumulatesDistanceAndTracksMaximumSpeed() {
         var tracker = TripTracker(startedAt: Date(timeIntervalSince1970: 100))
+        let startingFix = fix(Date(timeIntervalSince1970: 100), speed: 0)
+        _ = tracker.ingest(startingFix, now: startingFix.timestamp, segmentDistanceMeters: 0)
         for (index, speed) in [3.0, 10.0, 6.0].enumerated() {
-            let date = Date(timeIntervalSince1970: 100 + Double(index + 1))
+            let date = Date(timeIntervalSince1970: 101 + Double(index))
             _ = tracker.ingest(fix(date, speed: speed), now: date, segmentDistanceMeters: 5)
         }
         XCTAssertEqual(tracker.trip.distanceMeters, 15, accuracy: 0.001)
@@ -56,6 +90,12 @@ final class TripProcessorTests: XCTestCase {
         let jump = fix(Date(timeIntervalSince1970: 101), speed: 3)
         XCTAssertEqual(tracker.ingest(jump, now: jump.timestamp, segmentDistanceMeters: 900), .rejected(.implausibleSpeed))
         XCTAssertEqual(tracker.trip.distanceMeters, 0, accuracy: 0.001)
+
+        let coldStartSpike = fix(Date(timeIntervalSince1970: 101), speed: 34.17)
+        let spikeResult = tracker.ingest(coldStartSpike, now: coldStartSpike.timestamp, segmentDistanceMeters: 2)
+        guard case .accepted(_, _, let spikeSpeed) = spikeResult else { return XCTFail("Expected accepted location with filtered speed") }
+        XCTAssertEqual(spikeSpeed, 0, accuracy: 0.001)
+        XCTAssertEqual(tracker.trip.maximumSpeedMetersPerSecond, 0, accuracy: 0.001)
     }
 
     func testResolvedDistanceFallsBackToStoredPoints() {
@@ -148,6 +188,20 @@ final class TripStatsTests: XCTestCase {
         XCTAssertEqual(TripStats.totalDistanceMeters([]), 0, accuracy: 0.001)
     }
 
+    func testDistanceSummariesFallBackToStoredRouteWhenSavedDistanceIsZero() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        var trip = self.trip(start: start, meters: 0)
+        trip.points = [
+            TripPoint(latitude: 41, longitude: 2, altitudeMeters: 0,
+                      timestamp: start, speedMetersPerSecond: 1, horizontalAccuracyMeters: 5),
+            TripPoint(latitude: 41.001, longitude: 2, altitudeMeters: 0,
+                      timestamp: start.addingTimeInterval(1), speedMetersPerSecond: 1, horizontalAccuracyMeters: 5)
+        ]
+
+        XCTAssertEqual(TripStats.totalDistanceMeters([trip]), 111.2, accuracy: 1)
+        XCTAssertEqual(TripStats.distanceMeters(on: start, trips: [trip]), 111.2, accuracy: 1)
+    }
+
     private func trip(start: Date, meters: Double) -> RecordedTrip {
         RecordedTrip(
             id: UUID().uuidString,
@@ -160,3 +214,4 @@ final class TripStatsTests: XCTestCase {
         )
     }
 }
+

@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>RideScreen usa Bluetooth para leer la batería y controlar la caja PKE de tu moto cuando lo solicitas.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>RideScreen usa tu ubicación mientras grabas un trayecto para calcular la distancia y la velocidad.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

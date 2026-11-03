@@ -2,6 +2,7 @@ import Foundation
 
 actor TripDiagnosticsLogger {
     static let maximumLines = 500
+    static let shared = TripDiagnosticsLogger()
 
     private let fileURL: URL
     private let fileManager: FileManager
@@ -60,3 +61,4 @@ actor TripDiagnosticsLogger {
         try handle.close()
     }
 }
+
