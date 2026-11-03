@@ -349,7 +349,6 @@ private struct PKEEntryCard: View {
                 .navigationBarTitleDisplayMode(.inline)
             }
             .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
         }
     }
 }
