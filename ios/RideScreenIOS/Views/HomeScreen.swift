@@ -304,6 +304,31 @@ struct HomeScreen: View {
             .accessibilityHidden(true)
     }
 
+    private var screenCaptureCard: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("mirror.capture.title")
+                    .font(RideFont.semiBold(16))
+                    .foregroundStyle(RideBrand.text)
+                Text("mirror.capture.description")
+                    .font(RideFont.regular(13))
+                    .foregroundStyle(RideBrand.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("mirror.capture.limit")
+                    .font(RideFont.medium(12))
+                    .foregroundStyle(RideBrand.gold)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            ScreenBroadcastPicker()
+                .frame(width: 52, height: 52)
+                .accessibilityLabel(Text("mirror.capture.start"))
+        }
+        .padding(16)
+        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RideBrand.outline, lineWidth: 1))
+    }
+
     // MARK: Formatting
 
     static func kmText(_ meters: Double) -> String {
@@ -534,30 +559,7 @@ struct BikeEditorSheet: View {
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
     }
 
-    private var screenCaptureCard: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("mirror.capture.title")
-                    .font(RideFont.semiBold(16))
-                    .foregroundStyle(RideBrand.text)
-                Text("mirror.capture.description")
-                    .font(RideFont.regular(13))
-                    .foregroundStyle(RideBrand.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("mirror.capture.limit")
-                    .font(RideFont.medium(12))
-                    .foregroundStyle(RideBrand.gold)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 8)
-            ScreenBroadcastPicker()
-                .frame(width: 52, height: 52)
-                .accessibilityLabel(Text("mirror.capture.start"))
-        }
-        .padding(16)
-        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RideBrand.outline, lineWidth: 1))
-    }
+
 }
 
 private struct ScreenBroadcastPicker: UIViewRepresentable {
