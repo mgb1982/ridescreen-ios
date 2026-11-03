@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 14728)
-Total output lines: 2422
-
 {
   "sourceLanguage": "es",
   "strings": {
@@ -1126,7 +1123,119 @@ Total output lines: 2422
         "en": {
           "stringUnit": {
             "state": "translated",
- …728 tokens truncated…"en": {
+            "value": "“Always” permission was not granted. The trip will record while RideScreen is open, but may stop when you lock the iPhone or switch apps."
+          }
+        }
+      }
+    },
+    "permission.services.off.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servicios de ubicación desactivados"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serveis d'ubicació desactivats"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location Services are off"
+          }
+        }
+      }
+    },
+    "permission.services.off.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa los servicios de ubicación en Ajustes de iOS para grabar un trayecto."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa els serveis d'ubicació als Ajustos d'iOS per gravar un trajecte."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on Location Services in iOS Settings to record a trip."
+          }
+        }
+      }
+    },
+    "recovery.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hay un trayecto interrumpido"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hi ha un trajecte interromput"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An interrupted trip was found"
+          }
+        }
+      }
+    },
+    "recovery.recover": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperar trayecto"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperar trajecte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover trip"
+          }
+        }
+      }
+    },
+    "recovery.discard": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar"
+          }
+        },
+        "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Discard"
@@ -2310,4 +2419,3 @@ Total output lines: 2422
   },
   "version": "1.0"
 }
-
