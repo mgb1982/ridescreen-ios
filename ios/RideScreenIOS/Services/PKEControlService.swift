@@ -108,6 +108,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     private var writeChar: CBCharacteristic?
     private var notifyChar: CBCharacteristic?
     private var continuation: CheckedContinuation<String, Error>?
+    private var pendingReplyID: UUID?
     private var buffer = ""
     private var expectedCode = ""
     private var scanWaiter: CheckedContinuation<CBPeripheral, Error>?
@@ -151,11 +152,17 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         let challengeReply = try await ask(code: code, command: "008")
         voltage = PKEProtocol.voltage(challengeReply)
         guard let nonce = PKEProtocol.challenge(challengeReply), let cipher = PKEProtocol.derive(code: code, mcuID: mcu, challenge: nonce) else { throw PKEError.badReply }
-        try await write(PKEProtocol.actionFrame(code: code, action: action, cipher: cipher))
-        _ = try await waitReply(command: "001")
-        try await Task.sleep(for: .milliseconds(1500))
-        let state = try await ask(code: code, command: "001,7")
-        locked = PKEProtocol.locked(state)
+        _ = try await exchange(PKEProtocol.actionFrame(code: code, action: action, cipher: cipher), command: "001")
+        let expectedState: Bool? = action == .lock ? true : (action == .unlock ? false : nil)
+        let attempts = expectedState == nil ? 1 : 6
+        for attempt in 0..<attempts {
+            try await Task.sleep(for: .milliseconds(700))
+            let state = try await ask(code: code, command: "001,7")
+            locked = PKEProtocol.locked(state)
+            if let expectedState, locked == expectedState { break }
+            if expectedState == nil { break }
+            if attempt < attempts - 1 { log("action state not confirmed yet; checking again") }
+        }
         status = action == .lock && locked != true ? "La caja no confirmÃ³ el bloqueo" : (action == .unlock && locked != false ? "La caja no confirmÃ³ el desbloqueo" : "Orden enviada Â· estado actualizado")
     }
     private func open(code: String) async throws {
@@ -174,7 +181,30 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     }
     private func ask(code: String, command: String) async throws -> String {
         log("request sent: \(command); waiting for response")
-        try await write(PKEProtocol.frame(code: code, command: command)); return try await waitReply(command: String(command.prefix(3)))
+        return try await exchange(PKEProtocol.frame(code: code, command: command), command: String(command.prefix(3)))
+    }
+    private func exchange(_ data: Data, command: String) async throws -> String {
+        try await withCheckedThrowingContinuation { (c: CheckedContinuation<String, Error>) in
+            guard continuation == nil else { c.resume(throwing: PKEError.busy); return }
+            let requestID = UUID()
+            continuation = c
+            pendingReplyID = requestID
+            expectedReply = command
+            Task {
+                do { try await self.write(data) }
+                catch { self.failPendingReply(error) }
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(6))
+                if self.pendingReplyID == requestID { self.failPendingReply(PKEError.timeout) }
+            }
+        }
+    }
+    private func failPendingReply(_ error: Error) {
+        let pending = continuation
+        continuation = nil
+        pendingReplyID = nil
+        pending?.resume(throwing: error)
     }
     private func write(_ data: Data) async throws {
         guard let p = peripheral, let c = writeChar else { throw PKEError.noLink }
@@ -189,14 +219,13 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         }
     }
     private var writeWaiter: CheckedContinuation<Void, Error>?
-    private func waitReply(command: String) async throws -> String {
-        try await withCheckedThrowingContinuation { c in
-            continuation = c; expectedReply = command
-            Task { try? await Task.sleep(for: .seconds(6)); if self.continuation != nil { self.continuation?.resume(throwing: PKEError.timeout); self.continuation = nil } }
-        }
-    }
     private var expectedReply = ""
-    private func close() { if let p = peripheral { central.cancelPeripheralConnection(p) }; peripheral = nil; writeChar = nil; notifyChar = nil }
+    private func close() {
+        if continuation != nil { failPendingReply(PKEError.noLink) }
+        if let waiter = writeWaiter { writeWaiter = nil; waiter.resume(throwing: PKEError.noLink) }
+        if let p = peripheral { central.cancelPeripheralConnection(p) }
+        peripheral = nil; writeChar = nil; notifyChar = nil; buffer = ""
+    }
     func centralManagerDidUpdateState(_ central: CBCentralManager) { if central.state != .poweredOn { status = "Bluetooth no disponible" } }
     func centralManager(_ central: CBCentralManager, didDiscover p: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
         let name = (advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? p.name ?? "").uppercased()
@@ -227,13 +256,16 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
             let parts = frame.components(separatedBy: ",")
             guard parts.first == "*AT", parts.contains(expectedReply), parts.contains(expectedCode) else { log("ignored unmatched response frame (contents redacted)"); continue }
             log("expected response received (contents redacted)")
-            continuation?.resume(returning: frame); continuation = nil
+            let pending = continuation
+            continuation = nil
+            pendingReplyID = nil
+            pending?.resume(returning: frame)
         }
     }
 }
 
 enum PKEError: LocalizedError {
-    case missingCredentials, bluetoothOff, notFound, noLink, timeout, badReply
-    var errorDescription: String? { switch self { case .missingCredentials: "Configura el cÃ³digo PKE y el McuID"; case .bluetoothOff: "Activa Bluetooth"; case .notFound: "No se encontrÃ³ la caja PKE"; case .noLink: "No se pudo conectar con la caja"; case .timeout: "La caja no respondiÃ³"; case .badReply: "Respuesta PKE no vÃ¡lida" } }
+    case missingCredentials, bluetoothOff, notFound, noLink, timeout, badReply, busy
+    var errorDescription: String? { switch self { case .missingCredentials: "Configura el cÃ³digo PKE y el McuID"; case .bluetoothOff: "Activa Bluetooth"; case .notFound: "No se encontrÃ³ la caja PKE"; case .noLink: "No se pudo conectar con la caja"; case .timeout: "La caja no respondiÃ³"; case .badReply: "Respuesta PKE no vÃ¡lida"; case .busy: "Hay otra comunicaciÃ³n PKE en curso" } }
 }
 
