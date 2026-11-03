@@ -44,8 +44,8 @@ enum PXCWireCodec {
         let command: UInt32 = buffer.readLE(at: 0)
         let totalLength: UInt32 = buffer.readLE(at: 4)
         let magic: UInt32 = buffer.readLE(at: 8)
-        guard totalLength >= controlHeaderLength,
-              totalLength <= controlHeaderLength + maximumControlPayload else {
+        guard totalLength >= UInt32(controlHeaderLength),
+              totalLength <= UInt32(controlHeaderLength + maximumControlPayload) else {
             throw PXCWireError.invalidControlLength
         }
         guard magic == (command ^ totalLength) else { throw PXCWireError.invalidControlMagic }
