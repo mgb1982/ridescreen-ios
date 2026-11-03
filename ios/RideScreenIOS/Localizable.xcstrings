@@ -3174,6 +3174,98 @@
           }
         }
       }
+    },
+    "mirror.capture.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proyección de pantalla"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Projecció de pantalla"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen projection"
+          }
+        }
+      }
+    },
+    "mirror.capture.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia la captura de pantalla completa con el selector seguro de iOS."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia la captura de pantalla completa amb el selector segur de l’iOS."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start full-screen capture with the iOS system picker."
+          }
+        }
+      }
+    },
+    "mirror.capture.limit": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prueba técnica: el envío al cuadro aún está en desarrollo."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova tècnica: l’enviament al quadre encara està en desenvolupament."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Technical preview: streaming to the bike display is still in development."
+          }
+        }
+      }
+    },
+    "mirror.capture.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar captura de pantalla"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar captura de pantalla"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start screen capture"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
