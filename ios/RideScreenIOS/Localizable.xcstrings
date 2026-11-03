@@ -3060,6 +3060,29 @@
         }
       }
     },
+    "pke.open.controls": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir controles PKE"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obre els controls PKE"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open PKE controls"
+          }
+        }
+      }
+    },
     "pke.setup.section": {
       "extractionState": "manual",
       "localizations": {
