@@ -1,5 +1,7 @@
 import PhotosUI
+import ReplayKit
 import SwiftUI
+import UIKit
 
 enum MainTab: Hashable {
     case home, record, trips, diagnostics
@@ -23,6 +25,7 @@ struct HomeScreen: View {
                     RideScreenHeader(eyebrow: "tab.home")
                     hero
                     PKEControlsCard(location: viewModel.locationService)
+                    screenCaptureCard
                     liveSection
                     tripsCard
                     HStack(alignment: .top, spacing: 12) {
@@ -530,5 +533,43 @@ struct BikeEditorSheet: View {
         .background(Color(hex: 0x2D3B31), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
     }
+
+    private var screenCaptureCard: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("mirror.capture.title")
+                    .font(RideFont.semiBold(16))
+                    .foregroundStyle(RideBrand.text)
+                Text("mirror.capture.description")
+                    .font(RideFont.regular(13))
+                    .foregroundStyle(RideBrand.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("mirror.capture.limit")
+                    .font(RideFont.medium(12))
+                    .foregroundStyle(RideBrand.gold)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            ScreenBroadcastPicker()
+                .frame(width: 52, height: 52)
+                .accessibilityLabel(Text("mirror.capture.start"))
+        }
+        .padding(16)
+        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RideBrand.outline, lineWidth: 1))
+    }
 }
+
+private struct ScreenBroadcastPicker: UIViewRepresentable {
+    func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
+        let picker = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 52, height: 52))
+        picker.preferredExtension = "com.mgb1982.RideScreenIOS.BroadcastExtension"
+        picker.showsMicrophoneButton = false
+        picker.tintColor = UIColor(RideBrand.gold)
+        return picker
+    }
+
+    func updateUIView(_ picker: RPSystemBroadcastPickerView, context: Context) {}
+}
+
 
