@@ -73,6 +73,12 @@ final class TripProcessorTests: XCTestCase {
         let jump = fix(Date(timeIntervalSince1970: 101), speed: 3)
         XCTAssertEqual(tracker.ingest(jump, now: jump.timestamp, segmentDistanceMeters: 900), .rejected(.implausibleSpeed))
         XCTAssertEqual(tracker.trip.distanceMeters, 0, accuracy: 0.001)
+
+        let coldStartSpike = fix(Date(timeIntervalSince1970: 101), speed: 34.17)
+        let spikeResult = tracker.ingest(coldStartSpike, now: coldStartSpike.timestamp, segmentDistanceMeters: 2)
+        guard case .accepted(_, _, let spikeSpeed) = spikeResult else { return XCTFail("Expected accepted location with filtered speed") }
+        XCTAssertEqual(spikeSpeed, 0, accuracy: 0.001)
+        XCTAssertEqual(tracker.trip.maximumSpeedMetersPerSecond, 0, accuracy: 0.001)
     }
 
     func testResolvedDistanceFallsBackToStoredPoints() {
@@ -163,6 +169,20 @@ final class TripStatsTests: XCTestCase {
         XCTAssertEqual(TripStats.distanceMeters(on: now, trips: [today, yesterday], calendar: calendar), 5_000, accuracy: 0.001)
         XCTAssertEqual(TripStats.totalDistanceMeters([today, yesterday]), 14_000, accuracy: 0.001)
         XCTAssertEqual(TripStats.totalDistanceMeters([]), 0, accuracy: 0.001)
+    }
+
+    func testDistanceSummariesFallBackToStoredRouteWhenSavedDistanceIsZero() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        var trip = self.trip(start: start, meters: 0)
+        trip.points = [
+            TripPoint(latitude: 41, longitude: 2, altitudeMeters: 0,
+                      timestamp: start, speedMetersPerSecond: 1, horizontalAccuracyMeters: 5),
+            TripPoint(latitude: 41.001, longitude: 2, altitudeMeters: 0,
+                      timestamp: start.addingTimeInterval(1), speedMetersPerSecond: 1, horizontalAccuracyMeters: 5)
+        ]
+
+        XCTAssertEqual(TripStats.totalDistanceMeters([trip]), 111.2, accuracy: 1)
+        XCTAssertEqual(TripStats.distanceMeters(on: start, trips: [trip]), 111.2, accuracy: 1)
     }
 
     private func trip(start: Date, meters: Double) -> RecordedTrip {
