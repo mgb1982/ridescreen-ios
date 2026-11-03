@@ -111,6 +111,7 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     private var pendingReplyID: UUID?
     private var buffer = ""
     private var expectedCode = ""
+    private var unmatchedPeripheralCount = 0
     private var scanWaiter: CheckedContinuation<CBPeripheral, Error>?
     private var connectWaiter: CheckedContinuation<Void, Error>?
     private var readyWaiter: CheckedContinuation<Void, Error>?
@@ -167,11 +168,22 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
     }
     private func open(code: String) async throws {
         expectedCode = code
-        log("Bluetooth state: \(central.state.rawValue); scanning for NUS service")
+        log("Bluetooth state: \(central.state.rawValue); scanning BLE advertisements for configured PKE")
         guard central.state == .poweredOn else { throw PKEError.bluetoothOff }
+        unmatchedPeripheralCount = 0
         let found = try await withCheckedThrowingContinuation { (c: CheckedContinuation<CBPeripheral, Error>) in
-            scanWaiter = c; central.scanForPeripherals(withServices: [PKEProtocol.service]);
-            Task { try? await Task.sleep(for: .seconds(12)); if self.scanWaiter != nil { self.central.stopScan(); self.scanWaiter?.resume(throwing: PKEError.notFound); self.scanWaiter = nil } }
+            scanWaiter = c
+            // Some PKE boxes expose Nordic UART only after connecting and do not advertise its UUID.
+            central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
+            Task {
+                try? await Task.sleep(for: .seconds(12))
+                if self.scanWaiter != nil {
+                    self.central.stopScan()
+                    self.log("BLE scan timed out; unmatched advertisements observed: \(self.unmatchedPeripheralCount)")
+                    self.scanWaiter?.resume(throwing: PKEError.notFound)
+                    self.scanWaiter = nil
+                }
+            }
         }
         peripheral = found; found.delegate = self
         log("matching peripheral found; connecting")
@@ -232,8 +244,11 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         let serviceData = advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] ?? [:]
         let manufacturerData = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data ?? Data()
         let advertHex = (Array(serviceData.values) + [manufacturerData]).map { $0.map { String(format: "%02X", $0) }.joined() }.joined()
-        guard name.contains(expectedCode) || name == "PKE-" + expectedCode.suffix(4) || advertHex.contains(expectedCode) else { return }
-        log("advertisement matched expected device; RSSI \(rssi)")
+        guard name.contains(expectedCode) || name == "PKE-" + expectedCode.suffix(4) || advertHex.contains(expectedCode) else {
+            unmatchedPeripheralCount += 1
+            return
+        }
+        log("configured PKE advertisement matched; RSSI \(rssi)")
         central.stopScan(); scanWaiter?.resume(returning: p); scanWaiter = nil
     }
     func centralManager(_ central: CBCentralManager, didConnect p: CBPeripheral) { log("connected; discovering UART service"); connectWaiter?.resume(); connectWaiter = nil }
