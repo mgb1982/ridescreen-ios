@@ -456,6 +456,12 @@ struct BikeEditorSheet: View {
                 VStack(alignment: .leading, spacing: 8) {
                     sectionLabel("start.editor.name")
                     TextField("start.editor.namePlaceholder", text: $name)
+                        .onChange(of: name) { newValue in
+                            let limitedName = String(newValue.prefix(GarageStore.maximumNameLength))
+                            if limitedName != newValue {
+                                name = limitedName
+                            }
+                        }
                         .font(RideFont.semiBold(16))
                         .foregroundStyle(RideBrand.text)
                         .textInputAutocapitalization(.words)
