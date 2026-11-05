@@ -215,3 +215,62 @@ final class TripStatsTests: XCTestCase {
     }
 }
 
+
+/// Byte layout must match the Android EasyConn implementation (PxcFrame.kt / EasyConnProber.kt).
+final class PXCWireCodecTests: XCTestCase {
+    func testMdnsRespondFrameMatchesAndroidLayout() throws {
+        let json = #"{"phoneType":"Android"}"#
+        let frame = try PXCWireCodec.encodeControl(command: 0x7000_0010, payload: Data(json.utf8))
+        let total = UInt32(16 + json.utf8.count)
+        XCTAssertEqual(Array(frame.prefix(4)), [0x10, 0x00, 0x00, 0x70])
+        XCTAssertEqual(Array(frame[4..<8]), [UInt8(total & 0xFF), UInt8(total >> 8 & 0xFF), 0, 0])
+        let magic = 0x7000_0010 ^ total
+        XCTAssertEqual(Array(frame[8..<12]), [UInt8(magic & 0xFF), UInt8(magic >> 8 & 0xFF), UInt8(magic >> 16 & 0xFF), UInt8(magic >> 24)])
+        XCTAssertEqual(Array(frame[12..<16]), [0, 0, 0, 0])
+        XCTAssertEqual(String(decoding: frame.suffix(from: 16), as: UTF8.self), json)
+    }
+
+    func testControlFrameRoundTripAndPartialBuffers() throws {
+        let encoded = try PXCWireCodec.encodeControl(command: 0x7000_0011, payload: Data(#"{"status":true}"#.utf8))
+        var buffer = encoded.prefix(10)
+        XCTAssertNil(try PXCWireCodec.takeControlFrame(from: &buffer))
+        buffer = Data(encoded.dropLast())
+        XCTAssertNil(try PXCWireCodec.takeControlFrame(from: &buffer))
+        buffer = encoded + encoded
+        let first = try XCTUnwrap(PXCWireCodec.takeControlFrame(from: &buffer))
+        XCTAssertEqual(first.command, 0x7000_0011)
+        XCTAssertEqual(String(decoding: first.payload, as: UTF8.self), #"{"status":true}"#)
+        XCTAssertEqual(buffer.count, encoded.count)
+    }
+
+    func testControlFrameWithBadMagicThrows() throws {
+        var encoded = try PXCWireCodec.encodeControl(command: 0x7000_0000)
+        encoded[8] ^= 0xFF
+        XCTAssertThrowsError(try PXCWireCodec.takeControlFrame(from: &encoded)) { error in
+            XCTAssertEqual(error as? PXCWireError, .invalidControlMagic)
+        }
+    }
+
+    func testMediaRequestAndRawVideoFrame() throws {
+        var buffer = Data([114, 0, 2, 0, 7, 0, 0, 0, 0xAA, 0xBB, 0x01])
+        let request = try XCTUnwrap(PXCWireCodec.takeMediaRequest(from: &buffer))
+        XCTAssertEqual(request.command, 114)
+        XCTAssertEqual(request.token, 7)
+        XCTAssertEqual(request.payload, Data([0xAA, 0xBB]))
+        XCTAssertEqual(buffer, Data([0x01]))
+        let raw = try PXCWireCodec.encodeRawVideoFrame(Data([0, 0, 0, 1, 0x65]))
+        XCTAssertEqual(Array(raw), [5, 0, 0, 0, 0, 0, 0, 1, 0x65])
+    }
+}
+
+final class MirrorQRTests: XCTestCase {
+    func testParsesCarbitProjectionLink() {
+        let qr = MirrorQR.parse("https://www.carbit.com.cn/download?modelid=21340&ssid=ZT66TEST&pwd=12345678&action=1")
+        XCTAssertEqual(qr, MirrorQR(ssid: "ZT66TEST", password: "12345678", modelID: "21340"))
+    }
+
+    func testRejectsKeylessPairingCode() {
+        XCTAssertNil(MirrorQR.parse("125;010;000000000000000;AA;BB;;;CC;;DD"))
+        XCTAssertNil(MirrorQR.parse("https://example.com/?action=8&mac=00:11:22:33:44:55"))
+    }
+}

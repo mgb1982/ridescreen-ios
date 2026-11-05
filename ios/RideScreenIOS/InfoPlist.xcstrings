@@ -69,6 +69,52 @@
           }
         }
       }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen se conecta a la pantalla de tu moto a través de su Wi‑Fi para enviarle la imagen."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen es connecta a la pantalla de la moto a través del seu Wi‑Fi per enviar-li la imatge."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen connects to your bike's display over its Wi‑Fi to send it the picture."
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen usa la cámara para leer el código QR de la pantalla de tu moto."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen fa servir la càmera per llegir el codi QR de la pantalla de la moto."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RideScreen uses the camera to read the QR code on your bike's display."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -8,6 +8,14 @@
     <string>RideScreen usa tu ubicación mientras grabas un trayecto para calcular la distancia y la velocidad.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>RideScreen necesita tu ubicación en segundo plano para continuar grabando el trayecto cuando bloqueas el iPhone. Solo se usa durante una grabación activa.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>RideScreen se conecta a la pantalla de tu moto a través de su Wi‑Fi para enviarle la imagen.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_EasyConn._tcp</string>
+    </array>
+    <key>NSCameraUsageDescription</key>
+    <string>RideScreen usa la cámara para leer el código QR de la pantalla de tu moto.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>

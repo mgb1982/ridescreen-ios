@@ -1,5 +1,7 @@
 import PhotosUI
+import ReplayKit
 import SwiftUI
+import UIKit
 
 enum MainTab: Hashable {
     case home, record, trips, diagnostics
@@ -23,6 +25,7 @@ struct HomeScreen: View {
                     RideScreenHeader(eyebrow: "tab.home")
                     hero
                     PKEEntryCard(location: viewModel.locationService)
+                    MirrorTestEntryCard()
                     liveSection
                     tripsCard
                     HStack(alignment: .top, spacing: 12) {
@@ -576,5 +579,32 @@ struct BikeEditorSheet: View {
         .background(Color(hex: 0x2D3B31), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
     }
+
+
 }
+
+struct ScreenBroadcastPicker: UIViewRepresentable {
+    /// The embedded broadcast extension's real bundle ID. Sideloading tools may rewrite bundle IDs,
+    /// so read it from the .appex inside the app instead of hard-coding it.
+    static var extensionBundleID: String {
+        if let plugins = Bundle.main.builtInPlugInsURL,
+           let items = try? FileManager.default.contentsOfDirectory(at: plugins, includingPropertiesForKeys: nil),
+           let appex = items.first(where: { $0.pathExtension == "appex" }),
+           let id = Bundle(url: appex)?.bundleIdentifier {
+            return id
+        }
+        return "com.mgb1982.RideScreenIOS.BroadcastExtension"
+    }
+
+    func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
+        let picker = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 52, height: 52))
+        picker.preferredExtension = Self.extensionBundleID
+        picker.showsMicrophoneButton = false
+        picker.tintColor = UIColor(RideBrand.gold)
+        return picker
+    }
+
+    func updateUIView(_ picker: RPSystemBroadcastPickerView, context: Context) {}
+}
+
 
