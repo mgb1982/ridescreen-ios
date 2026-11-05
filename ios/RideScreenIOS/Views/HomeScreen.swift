@@ -22,7 +22,7 @@ struct HomeScreen: View {
                 VStack(alignment: .leading, spacing: 14) {
                     RideScreenHeader(eyebrow: "tab.home")
                     hero
-                    PKEControlsCard(location: viewModel.locationService)
+                    PKEEntryCard(location: viewModel.locationService)
                     liveSection
                     tripsCard
                     HStack(alignment: .top, spacing: 12) {
@@ -310,6 +310,46 @@ struct HomeScreen: View {
     static func duration(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds).rounded())
         return String(format: "%02d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
+    }
+}
+
+private struct PKEEntryCard: View {
+    @ObservedObject var location: TripLocationService
+    @State private var showingControls = false
+
+    var body: some View {
+        Button {
+            showingControls = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "key.horizontal.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(RideBrand.gold)
+                Text("pke.open.controls")
+                    .font(RideFont.semiBold(14))
+                    .foregroundStyle(RideBrand.text)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(RideBrand.secondary)
+            }
+            .padding(16)
+            .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingControls) {
+            NavigationStack {
+                ScrollView {
+                    PKEControlsCard(location: location)
+                        .padding(16)
+                }
+                .background(RideBrand.background.ignoresSafeArea())
+                .navigationTitle("PKE")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
 }
 
