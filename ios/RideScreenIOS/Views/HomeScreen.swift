@@ -24,8 +24,8 @@ struct HomeScreen: View {
                 VStack(alignment: .leading, spacing: 14) {
                     RideScreenHeader(eyebrow: "tab.home")
                     hero
-                    PKEControlsCard(location: viewModel.locationService)
-                    screenCaptureCard
+                    PKEEntryCard(location: viewModel.locationService)
+                    MirrorTestEntryCard()
                     liveSection
                     tripsCard
                     HStack(alignment: .top, spacing: 12) {
@@ -304,31 +304,6 @@ struct HomeScreen: View {
             .accessibilityHidden(true)
     }
 
-    private var screenCaptureCard: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("mirror.capture.title")
-                    .font(RideFont.semiBold(16))
-                    .foregroundStyle(RideBrand.text)
-                Text("mirror.capture.description")
-                    .font(RideFont.regular(13))
-                    .foregroundStyle(RideBrand.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("mirror.capture.limit")
-                    .font(RideFont.medium(12))
-                    .foregroundStyle(RideBrand.gold)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 8)
-            ScreenBroadcastPicker()
-                .frame(width: 52, height: 52)
-                .accessibilityLabel(Text("mirror.capture.start"))
-        }
-        .padding(16)
-        .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(RideBrand.outline, lineWidth: 1))
-    }
-
     // MARK: Formatting
 
     static func kmText(_ meters: Double) -> String {
@@ -338,6 +313,46 @@ struct HomeScreen: View {
     static func duration(_ seconds: TimeInterval) -> String {
         let total = Int(max(0, seconds).rounded())
         return String(format: "%02d:%02d:%02d", total / 3600, (total % 3600) / 60, total % 60)
+    }
+}
+
+private struct PKEEntryCard: View {
+    @ObservedObject var location: TripLocationService
+    @State private var showingControls = false
+
+    var body: some View {
+        Button {
+            showingControls = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "key.horizontal.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(RideBrand.gold)
+                Text("pke.open.controls")
+                    .font(RideFont.semiBold(14))
+                    .foregroundStyle(RideBrand.text)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(RideBrand.secondary)
+            }
+            .padding(16)
+            .background(RideBrand.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(RideBrand.outline, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingControls) {
+            NavigationStack {
+                ScrollView {
+                    PKEControlsCard(location: location)
+                        .padding(16)
+                }
+                .background(RideBrand.background.ignoresSafeArea())
+                .navigationTitle("PKE")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.medium, .large])
+        }
     }
 }
 
@@ -444,6 +459,12 @@ struct BikeEditorSheet: View {
                 VStack(alignment: .leading, spacing: 8) {
                     sectionLabel("start.editor.name")
                     TextField("start.editor.namePlaceholder", text: $name)
+                        .onChange(of: name) { newValue in
+                            let limitedName = String(newValue.prefix(GarageStore.maximumNameLength))
+                            if limitedName != newValue {
+                                name = limitedName
+                            }
+                        }
                         .font(RideFont.semiBold(16))
                         .foregroundStyle(RideBrand.text)
                         .textInputAutocapitalization(.words)
@@ -562,10 +583,22 @@ struct BikeEditorSheet: View {
 
 }
 
-private struct ScreenBroadcastPicker: UIViewRepresentable {
+struct ScreenBroadcastPicker: UIViewRepresentable {
+    /// The embedded broadcast extension's real bundle ID. Sideloading tools may rewrite bundle IDs,
+    /// so read it from the .appex inside the app instead of hard-coding it.
+    static var extensionBundleID: String {
+        if let plugins = Bundle.main.builtInPlugInsURL,
+           let items = try? FileManager.default.contentsOfDirectory(at: plugins, includingPropertiesForKeys: nil),
+           let appex = items.first(where: { $0.pathExtension == "appex" }),
+           let id = Bundle(url: appex)?.bundleIdentifier {
+            return id
+        }
+        return "com.mgb1982.RideScreenIOS.BroadcastExtension"
+    }
+
     func makeUIView(context: Context) -> RPSystemBroadcastPickerView {
         let picker = RPSystemBroadcastPickerView(frame: CGRect(x: 0, y: 0, width: 52, height: 52))
-        picker.preferredExtension = "com.mgb1982.RideScreenIOS.BroadcastExtension"
+        picker.preferredExtension = Self.extensionBundleID
         picker.showsMicrophoneButton = false
         picker.tintColor = UIColor(RideBrand.gold)
         return picker

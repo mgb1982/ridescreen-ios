@@ -37,6 +37,8 @@
 		B20000000000000000000001 /* SampleHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* SampleHandler.swift */; };
 		B20000000000000000000003 /* RideScreenBroadcast.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B20000000000000000000006 /* RideScreenBroadcast.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B30000000000000000000001 /* PXCWireCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000002 /* PXCWireCodec.swift */; };
+		B40000000000000000000001 /* MirrorLinkTester.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000002 /* MirrorLinkTester.swift */; };
+		B40000000000000000000003 /* MirrorTestScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000004 /* MirrorTestScreen.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,6 +76,8 @@
 		B20000000000000000000004 /* BroadcastInfo.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = BroadcastInfo.plist; sourceTree = "<group>"; };
 		B20000000000000000000006 /* RideScreenBroadcast.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = RideScreenBroadcast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B30000000000000000000002 /* PXCWireCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PXCWireCodec.swift; sourceTree = "<group>"; };
+		B40000000000000000000002 /* MirrorLinkTester.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorLinkTester.swift; sourceTree = "<group>"; };
+		B40000000000000000000004 /* MirrorTestScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorTestScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +93,7 @@
 				C10000000000000000000046 /* PKEControlService.swift */,
 				C10000000000000000000003 /* TripDiagnosticsLogger.swift */,
 				B30000000000000000000002 /* PXCWireCodec.swift */,
+				B40000000000000000000002 /* MirrorLinkTester.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -98,6 +103,7 @@
 			children = (
 				C10000000000000000000005 /* TripRecordingViewModel.swift */,
 				C10000000000000000000044 /* HomeScreen.swift */,
+				B40000000000000000000004 /* MirrorTestScreen.swift */,
 				C10000000000000000000030 /* TripDetailScreen.swift */,
 			);
 			path = Views;
@@ -327,6 +333,8 @@
 				B10000000000000000000006 /* TripJournalStore.swift in Sources */,
 				B10000000000000000000008 /* TripGPXExporter.swift in Sources */,
 				B30000000000000000000001 /* PXCWireCodec.swift in Sources */,
+				B40000000000000000000001 /* MirrorLinkTester.swift in Sources */,
+				B40000000000000000000003 /* MirrorTestScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
