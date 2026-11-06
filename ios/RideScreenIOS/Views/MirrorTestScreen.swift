@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 import UIKit
 import VisionKit
 
@@ -161,6 +162,7 @@ struct MirrorTestScreen: View {
                 .font(RideFont.regular(13))
                 .foregroundStyle(RideBrand.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            DashDestinationPicker(navigator: imageTest.navigator)
             HStack(spacing: 10) {
                 Button {
                     if imageTest.isRunning {
@@ -303,6 +305,66 @@ struct QRScannerView: UIViewControllerRepresentable {
                     scanner.stopScanning()
                     onCode(value)
                     return
+                }
+            }
+        }
+    }
+}
+
+/// Destination for the dash navigation: search (Apple Maps), pick, clear.
+private struct DashDestinationPicker: View {
+    @ObservedObject var navigator: DashNavigator
+    @State private var query = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let name = navigator.destinationName {
+                HStack(spacing: 8) {
+                    Image(systemName: "flag.checkered").foregroundStyle(RideBrand.gold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: name).font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                        if let summary = navigator.routeSummary {
+                            Text(verbatim: summary).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(role: .destructive) { navigator.clearDestination() } label: {
+                        Label("dash.nav.clear", systemImage: "xmark.circle.fill")
+                    }
+                    .font(RideFont.medium(13))
+                }
+            } else {
+                HStack(spacing: 8) {
+                    TextField("dash.nav.placeholder", text: $query)
+                        .font(RideFont.regular(14))
+                        .submitLabel(.search)
+                        .onSubmit { navigator.search(query) }
+                        .padding(10)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 10))
+                    if navigator.searching {
+                        ProgressView()
+                    } else {
+                        Button { navigator.search(query) } label: { Image(systemName: "magnifyingglass") }
+                            .disabled(query.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+                if !navigator.hasFix {
+                    Text("dash.nav.noFix").font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                }
+                ForEach(Array(navigator.results.enumerated()), id: \.offset) { _, item in
+                    Button { navigator.setDestination(item); query = "" } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: item.name ?? "—").font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                            if let address = item.placemark.title {
+                                Text(verbatim: address).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

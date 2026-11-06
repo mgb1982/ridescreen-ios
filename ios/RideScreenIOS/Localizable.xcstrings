@@ -3733,19 +3733,19 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Con el Wi‑Fi de la moto conectado y la app de Android cerrada, pulsa Iniciar. Cuando el cuadro muestre la velocidad, la hora y el mapa, bloquea el iPhone y mira si la hora del cuadro sigue avanzando. Después comparte el registro."
+            "value": "Con el Wi‑Fi de la moto conectado y la app de Android cerrada, pulsa Iniciar. El cuadro mostrará un mapa que gira y se mueve contigo. Si eliges un destino, verás la ruta y la próxima maniobra. Bloquea el iPhone y comprueba que el mapa sigue moviéndose. Después comparte el registro."
           }
         },
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Amb el Wi‑Fi de la moto connectat i l’app d’Android tancada, prem Inicia. Quan el quadre mostri la velocitat, l’hora i el mapa, bloqueja l’iPhone i mira si l’hora del quadre continua avançant. Després comparteix el registre."
+            "value": "Amb el Wi‑Fi de la moto connectat i l’app d’Android tancada, prem Inicia. El quadre mostrarà un mapa que gira i es mou amb tu. Si tries una destinació, veuràs la ruta i la propera maniobra. Bloqueja l’iPhone i comprova que el mapa continua movent-se. Després comparteix el registre."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "With the bike's Wi‑Fi joined and the Android app closed, tap Start. When the dash shows speed, time and map, lock the iPhone and check whether the time on the dash keeps moving. Then share the log."
+            "value": "With the bike's Wi‑Fi joined and the Android app closed, tap Start. The dash shows a map that turns and moves with you. Pick a destination to see the route and the next turn. Lock the iPhone and check the map keeps moving. Then share the log."
           }
         }
       }
@@ -3769,6 +3769,75 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start"
+          }
+        }
+      }
+    },
+    "dash.nav.placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar destino"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca una destinació"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search destination"
+          }
+        }
+      }
+    },
+    "dash.nav.clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar destino"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Treu la destinació"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear destination"
+          }
+        }
+      }
+    },
+    "dash.nav.noFix": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para buscar cerca de ti, inicia antes la prueba (necesita tu ubicación)."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per cercar a prop teu, inicia abans la prova (necessita la teva ubicació)."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To search near you, start the test first (it needs your location)."
           }
         }
       }

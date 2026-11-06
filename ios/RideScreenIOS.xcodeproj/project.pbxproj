@@ -43,6 +43,9 @@
 		B40000000000000000000007 /* DashLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000008 /* DashLink.swift */; };
 		B40000000000000000000009 /* DashPictureSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000010 /* DashPictureSource.swift */; };
 		B40000000000000000000011 /* DashImageTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000012 /* DashImageTest.swift */; };
+		B40000000000000000000013 /* DashMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000014 /* DashMap.swift */; };
+		B40000000000000000000015 /* DashNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000016 /* DashNavigator.swift */; };
+		B40000000000000000000017 /* DashMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000018 /* DashMapTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -86,6 +89,9 @@
 		B40000000000000000000008 /* DashLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashLink.swift; sourceTree = "<group>"; };
 		B40000000000000000000010 /* DashPictureSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashPictureSource.swift; sourceTree = "<group>"; };
 		B40000000000000000000012 /* DashImageTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashImageTest.swift; sourceTree = "<group>"; };
+		B40000000000000000000014 /* DashMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashMap.swift; sourceTree = "<group>"; };
+		B40000000000000000000016 /* DashNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashNavigator.swift; sourceTree = "<group>"; };
+		B40000000000000000000018 /* DashMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashMapTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +112,8 @@
 				B40000000000000000000008 /* DashLink.swift */,
 				B40000000000000000000010 /* DashPictureSource.swift */,
 				B40000000000000000000012 /* DashImageTest.swift */,
+				B40000000000000000000014 /* DashMap.swift */,
+				B40000000000000000000016 /* DashNavigator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -138,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				B1000000000000000000000A /* TripDomainTests.swift */,
+				B40000000000000000000018 /* DashMapTests.swift */,
 			);
 			path = RideScreenIOSTests;
 			sourceTree = "<group>";
@@ -254,7 +263,7 @@
 /* End PBXNativeTarget section addition */
 
 /* Begin PBXSourcesBuildPhase section addition */
-		B10000000000000000000022 /* RideScreenIOSTests Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000009 /* TripDomainTests.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		B10000000000000000000022 /* RideScreenIOSTests Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000009 /* TripDomainTests.swift in Sources */, B40000000000000000000017 /* DashMapTests.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
 		B2000000000000000000000B /* Broadcast Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B20000000000000000000001 /* SampleHandler.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section addition */
 
@@ -350,6 +359,8 @@
 				B40000000000000000000007 /* DashLink.swift in Sources */,
 				B40000000000000000000009 /* DashPictureSource.swift in Sources */,
 				B40000000000000000000011 /* DashImageTest.swift in Sources */,
+				B40000000000000000000013 /* DashMap.swift in Sources */,
+				B40000000000000000000015 /* DashNavigator.swift in Sources */,
 				B40000000000000000000003 /* MirrorTestScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

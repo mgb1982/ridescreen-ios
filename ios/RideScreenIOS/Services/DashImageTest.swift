@@ -13,27 +13,31 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     @Published private(set) var isRunning = false
     @Published private(set) var streaming = false
     @Published private(set) var framesSent = 0
+    /// Moving map and destination/route; lives across test runs so a destination survives a restart.
+    let navigator: DashNavigator
 
     private var link: DashLink?
     private var source: DashPictureSource?
     private let location = CLLocationManager()
     private var lastLocation: CLLocation?
-    private var mapTimer: Timer?
     private var uiTimer: Timer?
     private var startDate = Date()
     private var appState = "app abierta"
     private var observers: [NSObjectProtocol] = []
-    private var snapshotInFlight = false
 
     var logText: String { lines.joined(separator: "\n") }
 
     override init() {
+        navigator = DashNavigator()
         super.init()
         location.delegate = self
         location.desiredAccuracy = kCLLocationAccuracyBest
         location.distanceFilter = kCLDistanceFilterNone
         location.pausesLocationUpdatesAutomatically = false
         location.activityType = .automotiveNavigation
+        navigator.log = { [weak self] text in self?.log(text) }
+        navigator.appState = { [weak self] in self?.appState ?? "" }
+        navigator.onStateChange = { [weak self] state in self?.source?.setMapState(state) }
     }
 
     func start(host: String) {
@@ -61,14 +65,12 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         let logger: (String) -> Void = { [weak self] text in Task { @MainActor in self?.log(text) } }
         let src = DashPictureSource(log: logger)
         source = src
+        src.setMapState(navigator.state)
         let link = DashLink(source: src, screenPixels: (Int(pixels.width), Int(pixels.height)), log: logger)
         link.onStreamingChanged = { [weak self] on in Task { @MainActor in self?.setStreaming(on) } }
         self.link = link
         link.start(host: target)
 
-        mapTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.refreshMap() }
-        }
         uiTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tickUI() }
         }
@@ -78,7 +80,6 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         guard isRunning else { return }
         link?.stop(); link = nil
         source?.stop(); source = nil
-        mapTimer?.invalidate(); mapTimer = nil
         uiTimer?.invalidate(); uiTimer = nil
         location.stopUpdatingLocation()
         location.allowsBackgroundLocationUpdates = false
@@ -142,7 +143,8 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         Task { @MainActor in
             let first = self.lastLocation == nil
             self.lastLocation = last
-            if first { self.log("Primera ubicación ±\(Int(last.horizontalAccuracy)) m"); self.refreshMap() }
+            if first { self.log("Primera ubicación ±\(Int(last.horizontalAccuracy)) m") }
+            self.navigator.update(location: last)
         }
     }
 
@@ -164,43 +166,6 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         default: return "sin decidir"
         }
     }
-
-    // MARK: Map
-
-    /// Apple Maps snapshot around the rider every 10 s. Whether this works with the phone locked is
-    /// part of the test, so successes and failures are logged with the app state.
-    private func refreshMap() {
-        guard isRunning, !snapshotInFlight, let here = lastLocation else { return }
-        snapshotInFlight = true
-        let options = MKMapSnapshotter.Options()
-        options.region = MKCoordinateRegion(center: here.coordinate, latitudinalMeters: 900, longitudinalMeters: 1_330)
-        options.size = CGSize(width: 370, height: 250)
-        options.scale = 1
-        options.traitCollection = UITraitCollection(userInterfaceStyle: .dark)
-        options.pointOfInterestFilter = .excludingAll
-        let state = appState
-        MKMapSnapshotter(options: options).start(with: .global(qos: .utility)) { [weak self] snapshot, error in
-            let image = snapshot?.image.cgImage
-            let message = error.map { "\($0.localizedDescription)" }
-            Task { @MainActor in
-                guard let self else { return }
-                self.snapshotInFlight = false
-                let clock = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short)
-                if let image {
-                    self.source?.setMap(image, note: "mapa \(clock) · \(state)")
-                    if self.mapLogCount < 3 || state != "app abierta" {
-                        self.mapLogCount += 1
-                        self.log("Mapa OK (\(state))")
-                    }
-                } else {
-                    self.source?.setMap(nil, note: "mapa: falló (\(state))")
-                    self.log("!! Mapa falló (\(state)): \(message ?? "sin imagen")")
-                }
-            }
-        }
-    }
-
-    private var mapLogCount = 0
 
     // MARK: Log
 
