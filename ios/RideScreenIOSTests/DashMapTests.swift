@@ -85,7 +85,7 @@ final class DashMapTests: XCTestCase {
     }
 }
 
-final class MirrorQRTests: XCTestCase {
+final class MirrorQRRawTests: XCTestCase {
     func testRawRoundTrip() {
         let qr = MirrorQR(ssid: "ZT test & co", password: "p+w=d", modelID: "703")
         XCTAssertEqual(MirrorQR.parse(qr.raw), qr)
