@@ -30,6 +30,18 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     private var fixDelaySum = 0.0
     private var fixDelayMax = 0.0
     private var lastFrames = 0
+    private var wifiTimer: Timer?
+    private var pendingHost = ""
+    /// Trip recording started with the picture (stopped with it).
+    var startTrip: (() -> Bool)?
+    var stopTrip: (() -> Void)?
+    private var tripStartedHere = false
+
+    /// Start the picture as soon as the test screen opens (set after the first time the dash shows it).
+    static var autoStart: Bool {
+        get { UserDefaults.standard.bool(forKey: "dash.autoStart") }
+        set { UserDefaults.standard.set(newValue, forKey: "dash.autoStart") }
+    }
 
     /// The log is also written to a file, so it survives the app closing or the battery dying.
     /// Starting a test moves the previous run's file to [previousLogURL].
@@ -66,16 +78,33 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         device.isBatteryMonitoringEnabled = true
         log(statusLine(prefix: "Inicio"))
 
-        guard let wifi = MirrorLinkTester.wifiIPv4() else {
-            log("!! Sin IPv4 de Wi‑Fi: únete antes al Wi‑Fi de la moto (ZT…)")
-            isRunning = false
-            return
-        }
-        let target = host.trimmingCharacters(in: .whitespaces).isEmpty ? wifi.gatewayGuess : host.trimmingCharacters(in: .whitespaces)
-        log("Wi‑Fi \(wifi.address) · cuadro \(target)")
-
         startLocation()
         observeAppState()
+        if let startTrip, startTrip() {
+            tripStartedHere = true
+            log("Viaje: grabando mientras se proyecta")
+        }
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.logMinute() }
+        }
+        pendingHost = host
+        if !connectIfWifi() {
+            log("Esperando al Wi‑Fi de la moto (ZT…); se conectará solo al unirse")
+            wifiTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self, self.isRunning else { return }
+                    if self.connectIfWifi() { self.wifiTimer?.invalidate(); self.wifiTimer = nil }
+                }
+            }
+        }
+    }
+
+    /// Connects to the dash once the phone has an IPv4 on Wi‑Fi. False while there is none.
+    private func connectIfWifi() -> Bool {
+        guard let wifi = MirrorLinkTester.wifiIPv4() else { return false }
+        let host = pendingHost
+        let target = host.trimmingCharacters(in: .whitespaces).isEmpty ? wifi.gatewayGuess : host.trimmingCharacters(in: .whitespaces)
+        log("Wi‑Fi \(wifi.address) · cuadro \(target)")
 
         let pixels = UIScreen.main.nativeBounds.size
         let logger: (String) -> Void = { [weak self] text in Task { @MainActor in self?.log(text) } }
@@ -90,9 +119,7 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         uiTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tickUI() }
         }
-        statsTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.logMinute() }
-        }
+        return true
     }
 
     func stop() {
@@ -101,6 +128,12 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         source?.stop(); source = nil
         uiTimer?.invalidate(); uiTimer = nil
         statsTimer?.invalidate(); statsTimer = nil
+        wifiTimer?.invalidate(); wifiTimer = nil
+        if tripStartedHere {
+            stopTrip?()
+            tripStartedHere = false
+            log("Viaje: guardado")
+        }
         location.stopUpdatingLocation()
         location.allowsBackgroundLocationUpdates = false
         observers.forEach { NotificationCenter.default.removeObserver($0) }
@@ -118,6 +151,7 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     private func setStreaming(_ on: Bool) {
         guard streaming != on else { return }
         streaming = on
+        if on { Self.autoStart = true }
         log(on ? "*** El cuadro está recibiendo imagen ***" : "El cuadro dejó de recibir imagen")
     }
 

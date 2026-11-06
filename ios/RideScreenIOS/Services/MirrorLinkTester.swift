@@ -9,6 +9,14 @@ struct MirrorQR: Equatable {
     let password: String
     let modelID: String?
 
+    /// Back to a parseable string, to keep it on the phone between tests.
+    var raw: String {
+        var c = URLComponents()
+        c.queryItems = [URLQueryItem(name: "ssid", value: ssid), URLQueryItem(name: "pwd", value: password)]
+            + (modelID.map { [URLQueryItem(name: "modelid", value: $0)] } ?? [])
+        return c.percentEncodedQuery ?? ""
+    }
+
     static func parse(_ raw: String) -> MirrorQR? {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }

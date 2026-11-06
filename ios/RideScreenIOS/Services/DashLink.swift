@@ -96,10 +96,12 @@ final class DashLink {
                 attempt += 1
                 let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: 10930)
                 let result = await MirrorProbe.run(endpoint: endpoint, json: DashProtocol.probeJSON, queue: self.probeQueue)
-                self.log("[PROBE] #\(attempt) \(host):10930 → \(result.message)")
+                if attempt <= 10 || attempt % 20 == 0 || result.accepted {
+                    self.log("[PROBE] #\(attempt) \(host):10930 → \(result.message)")
+                }
                 if result.accepted { self.log("[PROBE] accepted — waiting for the dash to connect back") }
                 try? await Task.sleep(nanoseconds: (result.accepted ? 4 : 3) * 1_000_000_000)
-                if attempt >= 40 { self.log("[PROBE] giving up after \(attempt) tries"); break }
+                // Keep trying while the test runs: the bike may be switched on later.
             }
             self?.q.async { self?.probing = false }
         }

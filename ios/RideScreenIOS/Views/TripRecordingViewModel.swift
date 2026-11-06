@@ -99,6 +99,21 @@ final class TripRecordingViewModel: ObservableObject {
         }
     }
 
+    /// Trip recording tied to the dash picture: starts without dialogs when location is already
+    /// allowed (the dash test keeps the app alive in the background). Returns whether it started.
+    @discardableResult
+    func startForDash() -> Bool {
+        guard !isRecording else { return false }
+        switch locationService.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            log("Recording started by the dash picture")
+            startActiveTrip(backgroundAllowed: true)
+            return true
+        default:
+            return false
+        }
+    }
+
     func requestWhenInUse() {
         awaitingWhenInUse = true
         log("Location permission request: When In Use")

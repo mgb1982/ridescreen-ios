@@ -5,6 +5,7 @@ import VisionKit
 
 /// Home card that opens the mirroring field test.
 struct MirrorTestEntryCard: View {
+    @EnvironmentObject private var trips: TripRecordingViewModel
     @State private var showing = false
 
     var body: some View {
@@ -32,7 +33,7 @@ struct MirrorTestEntryCard: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showing) {
-            NavigationStack { MirrorTestScreen() }
+            NavigationStack { MirrorTestScreen() }.environmentObject(trips)
         }
     }
 }
@@ -41,6 +42,10 @@ struct MirrorTestEntryCard: View {
 struct MirrorTestScreen: View {
     @StateObject private var tester = MirrorLinkTester()
     @StateObject private var imageTest = DashImageTest()
+    @EnvironmentObject private var trips: TripRecordingViewModel
+    /// The dash QR (Wi‑Fi name and password) and the dash address are kept on this phone.
+    @AppStorage("dash.qr") private var savedQR = ""
+    @AppStorage("dash.host") private var savedHost = ""
     @State private var qr: MirrorQR?
     @State private var showingScanner = false
     @State private var pasted = ""
@@ -77,6 +82,18 @@ struct MirrorTestScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             isCaptured = UIScreen.main.isCaptured
         }
+        .onAppear {
+            if qr == nil, let restored = MirrorQR.parse(savedQR) { qr = restored }
+            if tester.bikeHost.isEmpty { tester.bikeHost = savedHost }
+            let recorder = trips
+            imageTest.startTrip = { [weak recorder] in recorder?.startForDash() ?? false }
+            imageTest.stopTrip = { [weak recorder] in recorder?.stopTapped() }
+            if DashImageTest.autoStart && !imageTest.isRunning && !tester.isRunning {
+                imageTest.start(host: tester.bikeHost)
+            }
+        }
+        .onChange(of: qr) { value in if let value { savedQR = value.raw } }
+        .onChange(of: tester.bikeHost) { value in savedHost = value }
         .onDisappear { tester.stop(); imageTest.stop() }
     }
 
