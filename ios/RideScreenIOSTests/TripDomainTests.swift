@@ -274,3 +274,53 @@ final class MirrorQRTests: XCTestCase {
         XCTAssertNil(MirrorQR.parse("https://example.com/?action=8&mac=00:11:22:33:44:55"))
     }
 }
+
+/// Dash session messages must match what RideScreen AA for Android sends (field-proven on the 125X).
+final class DashProtocolTests: XCTestCase {
+    func testAppStatusMatchesAndroidLog() {
+        let body = String(decoding: DashProtocol.appStatusPayload(width: 2161, height: 1080), as: UTF8.self)
+        XCTAssertEqual(body, #"{"displayRotation":0,"width":1080,"height":2161,"enableAccessibility":false,"enableAOAHid":true,"mode":2}"#)
+    }
+
+    func testZontesTimeMatchesAndroidLog() {
+        // Raúl's 125X log, 3 Nov 2026: dateTime=03.11.2026 11:05:16:152 currentTime=1793703916152 zone=Europe/Madrid
+        let now = Date(timeIntervalSince1970: 1_793_700_316.152)
+        let body = String(decoding: DashProtocol.zontesTime(now: now, zone: TimeZone(identifier: "Europe/Madrid")!), as: UTF8.self)
+        XCTAssertEqual(body, #"{"time":1793700316152,"currentTime":1793703916152,"currentTimeZone":"Europe/Madrid","dateTime":"03.11.2026 11:05:16:152"}"#)
+    }
+
+    func testCheckSNResultAndClientInfoOrder() {
+        XCTAssertEqual(String(decoding: DashProtocol.checkSNResult(serial: "SN1"), as: UTF8.self),
+                       #"{"isOk":true,"errCode":0,"errMsg":"","id":"SN1","client_set":"easy_conn"}"#)
+        let info = String(decoding: DashProtocol.clientInfoReply(phoneUUID: "u", publicKeyBase64: "k/+=", encryptedHUID: "h"), as: UTF8.self)
+        XCTAssertTrue(info.hasPrefix(#"{"pxcVersion":"1.0.2","phoneUUID":"u","#))
+        XCTAssertTrue(info.contains(#""package":"com.cfmoto.cfmotointernational""#))
+        XCTAssertTrue(info.contains(#""pubkey":"k/+=""#))
+        XCTAssertTrue(info.contains(#""supportFunction":128,"supportSyncCorrectTime":false"#))
+        XCTAssertNotNil(try? JSONSerialization.jsonObject(with: Data(info.utf8)))
+    }
+
+    func testCaptureConfigRoundTrip() {
+        var body = Data([0x20, 0x03, 0xA0, 0x01, 0, 0, 0, 0, 2, 0, 0, 0])
+        body.append(Data(count: 18))
+        let cfg = DashProtocol.parseCaptureConfig(body)
+        XCTAssertEqual(cfg, DashProtocol.CaptureConfig(width: 800, height: 416, fps: 0, encoder: 2, extend: 0))
+        XCTAssertEqual([UInt8](DashProtocol.captureReply(cfg)), [2, 0, 0, 0, 0x20, 0x03, 0xA0, 0x01, 0])
+        XCTAssertEqual([UInt8](DashProtocol.versionReply), [3, 0, 0, 0, 1, 0, 0, 0])
+    }
+
+    func testAvccToAnnexB() {
+        let avcc = Data([0, 0, 0, 2, 0x65, 0xAA, 0, 0, 0, 1, 0x41])
+        XCTAssertEqual([UInt8](DashPictureSource.avccToAnnexB(avcc)!), [0, 0, 0, 1, 0x65, 0xAA, 0, 0, 0, 1, 0x41])
+        XCTAssertNil(DashPictureSource.avccToAnnexB(Data([0, 0, 0, 9, 0x65])))
+    }
+
+    func testRSAKeyLooksLikeJavaX509AndSignsHUID() throws {
+        let rsa = DashRSA()
+        let spki = try XCTUnwrap(Data(base64Encoded: rsa.publicKeyBase64))
+        XCTAssertEqual(spki.count, 162)
+        XCTAssertEqual([UInt8](spki.prefix(3)), [0x30, 0x81, 0x9f])
+        let sig = try XCTUnwrap(Data(base64Encoded: rsa.signHUID("JC0000TEST")))
+        XCTAssertEqual(sig.count, 128)
+    }
+}
