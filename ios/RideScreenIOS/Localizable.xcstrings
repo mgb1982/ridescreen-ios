@@ -3841,6 +3841,29 @@
           }
         }
       }
+    },
+    "dash.log.previous": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartir registro de la prueba anterior"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comparteix el registre de la prova anterior"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share the previous test's log"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

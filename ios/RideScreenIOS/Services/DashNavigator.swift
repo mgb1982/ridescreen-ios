@@ -25,6 +25,10 @@ final class DashNavigator: ObservableObject {
     private var snapshotViewMeters: Double = 0
     private var snapshotInFlight = false
     private var snapshotCount = 0
+    private var snapshotter: MKMapSnapshotter?
+    private var snapshotGeneration = 0
+    private var snapshotFailures = 0
+    private var retryAfter = Date.distantPast
     private var destination: MKMapItem?
     private var maneuvers: [DashManeuver] = []
     private var progress = DashNavProgress()
@@ -40,7 +44,7 @@ final class DashNavigator: ObservableObject {
         if location.course >= 0 && speed > 1.5 { state.heading = location.course }
         state.fix = point
         if !hasFix { hasFix = true }
-        state.fixTime = Date()
+        state.fixTime = location.timestamp
         state.speed = speed
         state.viewMeters = DashGeo.viewMeters(speedKmh: speed * 3.6)
         if needsSnapshot(at: point) { snapshot(around: point) }
@@ -49,7 +53,8 @@ final class DashNavigator: ObservableObject {
     }
 
     private func needsSnapshot(at p: MKMapPoint) -> Bool {
-        if snapshotInFlight { return false }
+        if snapshotInFlight || Date() < retryAfter { return false }
+        if snapshotFailures > 0 { return true }
         if state.image == nil || state.imageRect.isNull { return true }
         if abs(snapshotViewMeters - state.viewMeters) > 1 { return true }
         // The visible map reaches ~0.6 view widths from the rider (rotated corners); the snapshot is
@@ -60,29 +65,45 @@ final class DashNavigator: ObservableObject {
 
     private func snapshot(around p: MKMapPoint) {
         snapshotInFlight = true
+        snapshotGeneration += 1
+        let generation = snapshotGeneration
         let view = state.viewMeters
         let ppm = MKMapPointsPerMeterAtLatitude(p.coordinate.latitude)
         let side = view * 2.6 * ppm
         let rect = MKMapRect(x: p.x - side / 2, y: p.y - side / 2, width: side, height: side)
         let options = MKMapSnapshotter.Options()
         options.mapRect = rect
-        options.size = CGSize(width: 1200, height: 1200)
+        options.size = CGSize(width: 1000, height: 1000)
         options.scale = 1
         options.traitCollection = UITraitCollection(userInterfaceStyle: .dark)
         options.pointOfInterestFilter = .excludingAll
         options.showsBuildings = false
         let started = Date()
         let appState = self.appState()
-        MKMapSnapshotter(options: options).start(with: .global(qos: .userInitiated)) { [weak self] snap, error in
+        let snapshotter = MKMapSnapshotter(options: options)
+        self.snapshotter = snapshotter
+        // Without coverage (a tunnel) the request can hang and never call back; give up after 10 s,
+        // otherwise no further map is ever requested.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            guard let self, self.snapshotInFlight, self.snapshotGeneration == generation else { return }
+            self.snapshotter?.cancel()
+            self.snapshotFailed("sin respuesta en 10 s", appState: appState)
+        }
+        snapshotter.start(with: .global(qos: .userInitiated)) { [weak self] snap, error in
             let image = snap?.image.cgImage
             let message = error?.localizedDescription
             Task { @MainActor in
-                guard let self else { return }
-                self.snapshotInFlight = false
+                guard let self, self.snapshotInFlight, self.snapshotGeneration == generation else { return }
                 guard let image else {
-                    self.state.note = "mapa: falló (\(appState))"
-                    self.log("!! Mapa falló (\(appState)): \(message ?? "sin imagen")")
+                    self.snapshotFailed(message ?? "sin imagen", appState: appState)
                     return
+                }
+                self.snapshotInFlight = false
+                self.snapshotter = nil
+                if self.snapshotFailures > 0 {
+                    self.log("Mapa recuperado tras \(self.snapshotFailures) intento(s) fallido(s)")
+                    self.snapshotFailures = 0
                 }
                 self.state.image = image
                 self.state.imageRect = rect
@@ -95,6 +116,19 @@ final class DashNavigator: ObservableObject {
                 self.onStateChange?(self.state)
             }
         }
+    }
+
+    /// Retry in 5 s (the next GPS fix after that asks again).
+    private func snapshotFailed(_ reason: String, appState: String) {
+        snapshotInFlight = false
+        snapshotter = nil
+        snapshotFailures += 1
+        retryAfter = Date().addingTimeInterval(5)
+        state.note = "sin mapa"
+        if snapshotFailures == 1 || snapshotFailures % 10 == 0 {
+            log("!! Mapa falló (\(appState), intento \(snapshotFailures)): \(reason) · reintento en 5 s")
+        }
+        onStateChange?(state)
     }
 
     // MARK: Destination and route

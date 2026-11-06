@@ -24,6 +24,19 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     private var startDate = Date()
     private var appState = "app abierta"
     private var observers: [NSObjectProtocol] = []
+    private var logFile: FileHandle?
+    private var statsTimer: Timer?
+    private var fixCount = 0
+    private var fixDelaySum = 0.0
+    private var fixDelayMax = 0.0
+    private var lastFrames = 0
+
+    /// The log is also written to a file, so it survives the app closing or the battery dying.
+    /// Starting a test moves the previous run's file to [previousLogURL].
+    static var logURL: URL { documents.appendingPathComponent("dash-log.txt") }
+    static var previousLogURL: URL { documents.appendingPathComponent("dash-log-anterior.txt") }
+    static var hasPreviousLog: Bool { FileManager.default.fileExists(atPath: previousLogURL.path) }
+    private static var documents: URL { FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0] }
 
     var logText: String { lines.joined(separator: "\n") }
 
@@ -44,11 +57,14 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         guard !isRunning else { return }
         lines = []
         startDate = Date()
+        openLogFile()
         framesSent = 0
         isRunning = true
         let device = UIDevice.current
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
-        log("RideScreen iOS · imagen propia · build \(build) · \(device.systemName) \(device.systemVersion)")
+        log("RideScreen iOS · imagen propia · build \(build) · \(device.systemName) \(device.systemVersion) · \(device.model)")
+        device.isBatteryMonitoringEnabled = true
+        log(statusLine(prefix: "Inicio"))
 
         guard let wifi = MirrorLinkTester.wifiIPv4() else {
             log("!! Sin IPv4 de Wi‑Fi: únete antes al Wi‑Fi de la moto (ZT…)")
@@ -74,6 +90,9 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         uiTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tickUI() }
         }
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.logMinute() }
+        }
     }
 
     func stop() {
@@ -81,13 +100,17 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         link?.stop(); link = nil
         source?.stop(); source = nil
         uiTimer?.invalidate(); uiTimer = nil
+        statsTimer?.invalidate(); statsTimer = nil
         location.stopUpdatingLocation()
         location.allowsBackgroundLocationUpdates = false
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         observers = []
         isRunning = false
         streaming = false
-        log("Prueba detenida · \(framesSent) imágenes enviadas")
+        log("Prueba detenida · \(framesSent) imágenes enviadas · " + statusLine(prefix: "Fin"))
+        try? logFile?.synchronize()
+        try? logFile?.close()
+        logFile = nil
     }
 
     // MARK: State
@@ -143,6 +166,10 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
         Task { @MainActor in
             let first = self.lastLocation == nil
             self.lastLocation = last
+            let delay = Date().timeIntervalSince(last.timestamp)
+            self.fixCount += 1
+            self.fixDelaySum += delay
+            self.fixDelayMax = max(self.fixDelayMax, delay)
             if first { self.log("Primera ubicación ±\(Int(last.horizontalAccuracy)) m") }
             self.navigator.update(location: last)
         }
@@ -169,9 +196,58 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
 
     // MARK: Log
 
+    /// Once a minute: battery, temperature, frame rate, drawing cost and GPS delay — to measure how
+    /// much the test costs per hour and whether the picture keeps up.
+    private func logMinute() {
+        let sent = link?.sentCount ?? 0
+        let stats = source?.takeStats() ?? (0, 0)
+        let gps = fixCount > 0
+            ? String(format: "GPS %ld fijaciones, retraso medio %.1f s (máx %.1f)", fixCount, fixDelaySum / Double(fixCount), fixDelayMax)
+            : "GPS sin fijaciones"
+        log(statusLine(prefix: "Minuto") + String(format: " · %.1f img/s dibujadas (%.0f ms c/u) · %.1f img/s enviadas · ",
+                                                    Double(stats.frames) / 60, stats.drawMs, Double(sent - lastFrames) / 60) + gps)
+        lastFrames = sent
+        fixCount = 0; fixDelaySum = 0; fixDelayMax = 0
+        try? logFile?.synchronize()
+    }
+
+    private func statusLine(prefix: String) -> String {
+        let device = UIDevice.current
+        let level = device.batteryLevel < 0 ? "?" : "\(Int((device.batteryLevel * 100).rounded()))%"
+        let charging: String
+        switch device.batteryState {
+        case .charging: charging = " cargando"
+        case .full: charging = " llena"
+        default: charging = ""
+        }
+        let thermal: String
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal: thermal = "normal"
+        case .fair: thermal = "templado"
+        case .serious: thermal = "caliente"
+        case .critical: thermal = "crítico"
+        @unknown default: thermal = "?"
+        }
+        let clock = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled ? " · ahorro" : ""
+        return "\(prefix) \(clock) · batería \(level)\(charging)\(lowPower) · temp. \(thermal) · \(appState)"
+    }
+
+    private func openLogFile() {
+        let fm = FileManager.default
+        if fm.fileExists(atPath: Self.logURL.path) {
+            try? fm.removeItem(at: Self.previousLogURL)
+            try? fm.moveItem(at: Self.logURL, to: Self.previousLogURL)
+        }
+        fm.createFile(atPath: Self.logURL.path, contents: nil)
+        logFile = try? FileHandle(forWritingTo: Self.logURL)
+    }
+
     func log(_ text: String) {
         let t = Date().timeIntervalSince(startDate)
-        lines.append(String(format: "%6.1fs ", t) + text)
+        let line = String(format: "%6.1fs ", t) + text
+        lines.append(line)
         if lines.count > 600 { lines.removeFirst(lines.count - 600) }
+        if let data = (line + "\n").data(using: .utf8) { try? logFile?.write(contentsOf: data) }
     }
 }

@@ -67,7 +67,7 @@ final class DashMapTests: XCTestCase {
         XCTAssertEqual(fix.distance(to: later), 10, accuracy: 0.2)
         XCTAssertGreaterThan(later.x, fix.x)                         // moved east
         let capped = s.position(at: Date(timeIntervalSince1970: 10))!
-        XCTAssertEqual(fix.distance(to: capped), 15, accuracy: 0.3)  // ≤ 1.5 s of extrapolation
+        XCTAssertEqual(fix.distance(to: capped), 30, accuracy: 0.5)  // ≤ 3 s of extrapolation
     }
 
     func testProjectionIsHeadingUp() {

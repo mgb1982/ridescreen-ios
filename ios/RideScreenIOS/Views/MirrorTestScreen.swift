@@ -192,6 +192,12 @@ struct MirrorTestScreen: View {
                     ShareLink(item: imageTest.logText) { Image(systemName: "square.and.arrow.up") }
                 }
             }
+            if !imageTest.isRunning && DashImageTest.hasPreviousLog {
+                ShareLink(item: DashImageTest.previousLogURL) {
+                    Label("dash.log.previous", systemImage: "clock.arrow.circlepath")
+                }
+                .font(RideFont.medium(13))
+            }
             if !imageTest.lines.isEmpty {
                 ScrollView(.horizontal) {
                     Text(imageTest.logText)

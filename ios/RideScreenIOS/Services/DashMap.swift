@@ -21,10 +21,11 @@ struct DashMapState {
     var nav: DashNavInfo?
     var note = "mapa: esperando ubicación"
 
-    /// Position now, extrapolated along the heading for up to 1.5 s after the fix.
+    /// Position now, extrapolated along the heading for up to 3 s after the fix was measured
+    /// ([fixTime] is the fix's own timestamp; iOS delivers fixes about a second late).
     func position(at now: Date) -> MKMapPoint? {
         guard let fix else { return nil }
-        let dt = min(max(now.timeIntervalSince(fixTime), 0), 1.5)
+        let dt = min(max(now.timeIntervalSince(fixTime), 0), 3)
         guard speed > 1, dt > 0 else { return fix }
         let meters = speed * dt
         let ppm = MKMapPointsPerMeterAtLatitude(fix.coordinate.latitude)

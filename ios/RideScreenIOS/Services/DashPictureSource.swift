@@ -34,6 +34,13 @@ final class DashPictureSource: DashFrameSource {
     private var frameIndex: Int64 = 0
     private var encodeFailures = 0
     private var encodedFrames = 0
+    // Smoothed rider position/heading actually drawn (on [q]).
+    private var shownRider: MKMapPoint?
+    private var shownHeading: Double = 0
+    private var tickCount = 0
+    // Stats for the per-minute log line (guarded by [lock]).
+    private var statFrames = 0
+    private var statDrawSeconds = 0.0
 
     // Inputs from the UI (guarded by [lock]).
     private var speedKmh: Double?
@@ -46,6 +53,12 @@ final class DashPictureSource: DashFrameSource {
 
     func update(speedKmh: Double?, appState: String) {
         lock.lock(); self.speedKmh = speedKmh; self.appState = appState; lock.unlock()
+    }
+
+    /// Frames encoded and average drawing time since the last call (for the per-minute log line).
+    func takeStats() -> (frames: Int, drawMs: Double) {
+        lock.lock(); defer { statFrames = 0; statDrawSeconds = 0; lock.unlock() }
+        return (statFrames, statFrames > 0 ? statDrawSeconds / Double(statFrames) * 1000 : 0)
     }
 
     func setMapState(_ state: DashMapState) {
@@ -129,9 +142,16 @@ final class DashPictureSource: DashFrameSource {
     }
 
     private func tick() {
+        tickCount += 1
+        // Parked: 2 fps is plenty and saves battery. Moving: 10 fps. A requested keyframe goes now.
+        lock.lock(); let moving = mapState.speed > 1 || mapState.fix == nil; lock.unlock()
+        if !forceKeyframe && !moving && tickCount % 5 != 0 { return }
         if session == nil { makeSession() }
+        let drawStart = CFAbsoluteTimeGetCurrent()
         guard let session, let buffer = render() else { return }
-        let pts = CMTime(value: frameIndex, timescale: 10)
+        let drawTime = CFAbsoluteTimeGetCurrent() - drawStart
+        lock.lock(); statFrames += 1; statDrawSeconds += drawTime; lock.unlock()
+        let pts = CMTime(value: Int64(tickCount), timescale: 10)
         frameIndex += 1
         let props: CFDictionary? = forceKeyframe ? [kVTEncodeFrameOptionKey_ForceKeyFrame: kCFBooleanTrue] as CFDictionary : nil
         let status = VTCompressionSessionEncodeFrame(
@@ -234,8 +254,23 @@ final class DashPictureSource: DashFrameSource {
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
         lock.lock()
-        let speed = speedKmh, state = appState, map = mapState
+        let state = appState, map = mapState
         lock.unlock()
+        let now = Date()
+        // Speed straight from the latest fix (no 1 s UI timer in between); "—" when GPS is lost.
+        let fresh = map.fix != nil && now.timeIntervalSince(map.fixTime) < 5
+        let speed: Double? = fresh ? map.speed * 3.6 : nil
+        // Ease towards the extrapolated position and heading instead of jumping on every fix.
+        if let target = map.position(at: now) {
+            if let shown = shownRider, shown.distance(to: target) < 150 {
+                shownRider = MKMapPoint(x: shown.x + (target.x - shown.x) * 0.35, y: shown.y + (target.y - shown.y) * 0.35)
+                shownHeading = DashGeo.normalize(shownHeading + DashGeo.normalize(map.heading - shownHeading) * 0.3)
+            } else {
+                shownRider = target; shownHeading = map.heading
+            }
+        } else {
+            shownRider = nil
+        }
         let frames = encodedFrames
         if encodedFrames == 0 && frameIndex == 0 { log("[ENC] drawing \(CVPixelBufferGetWidth(pb))x\(CVPixelBufferGetHeight(pb)) BGRA") }
         ctx.translateBy(x: 0, y: CGFloat(height))
@@ -243,7 +278,7 @@ final class DashPictureSource: DashFrameSource {
         UIGraphicsPushContext(ctx)
         defer { UIGraphicsPopContext() }
         DashPicture.draw(in: CGRect(x: 0, y: 0, width: width, height: height), speedKmh: speed, state: state,
-                         map: map, now: Date(), frames: frames)
+                         map: map, rider: shownRider, heading: shownHeading, now: now, frames: frames)
         return pb
     }
 
@@ -309,7 +344,8 @@ enum DashPicture {
     /// The rider sits low in the map so most of it shows what is ahead.
     static let riderAnchor = CGPoint(x: 250, y: 236)
 
-    static func draw(in rect: CGRect, speedKmh: Double?, state: String, map: DashMapState, now: Date, frames: Int) {
+    static func draw(in rect: CGRect, speedKmh: Double?, state: String, map: DashMapState, rider: MKMapPoint?,
+                     heading: Double, now: Date, frames: Int) {
         let s = rect.height / 416
         UIColor(red: 0.04, green: 0.05, blue: 0.06, alpha: 1).setFill(); UIRectFill(rect)
         let gold = UIColor(red: 1, green: 0.62, blue: 0.16, alpha: 1)
@@ -323,7 +359,7 @@ enum DashPicture {
             return (str as NSString).size(withAttributes: attrs)
         }
 
-        drawMap(map, now: now, scale: s, gold: gold, muted: muted)
+        drawMap(map, rider: rider, heading: heading, scale: s, gold: gold, muted: muted)
 
         // Right panel.
         let speedText = speedKmh.map { String(Int($0.rounded())) } ?? "—"
@@ -378,12 +414,13 @@ enum DashPicture {
                        y: anchor.y + CGFloat(dx * sin(t) + dy * cos(t)))
     }
 
-    private static func drawMap(_ map: DashMapState, now: Date, scale s: CGFloat, gold: UIColor, muted: UIColor) {
+    private static func drawMap(_ map: DashMapState, rider: MKMapPoint?, heading: Double, scale s: CGFloat,
+                                gold: UIColor, muted: UIColor) {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
         let area = CGRect(x: mapArea.minX * s, y: mapArea.minY * s, width: mapArea.width * s, height: mapArea.height * s)
         UIColor(white: 0.1, alpha: 1).setFill(); UIRectFill(area)
         let anchor = CGPoint(x: riderAnchor.x * s, y: riderAnchor.y * s)
-        guard let rider = map.position(at: now) else {
+        guard let rider else {
             (map.note as NSString).draw(at: CGPoint(x: 24 * s, y: 140 * s),
                                         withAttributes: [.font: UIFont.systemFont(ofSize: 20 * s, weight: .semibold),
                                                          .foregroundColor: muted])
@@ -396,18 +433,26 @@ enum DashPicture {
         if let image = map.image, !map.imageRect.isNull {
             ctx.saveGState()
             ctx.translateBy(x: anchor.x, y: anchor.y)
-            ctx.rotate(by: CGFloat(-map.heading * .pi / 180))
+            ctx.rotate(by: CGFloat(-heading * .pi / 180))
             ctx.scaleBy(x: CGFloat(k), y: CGFloat(k))
             let r = map.imageRect
-            ctx.interpolationQuality = .medium
+            ctx.interpolationQuality = .low
             UIImage(cgImage: image).draw(in: CGRect(x: r.minX - rider.x, y: r.minY - rider.y, width: r.width, height: r.height))
             ctx.restoreGState()
+        }
+        // No map around the rider (no coverage, e.g. after a tunnel): say so; route and arrow still work.
+        let covered = map.image != nil && !map.imageRect.isNull
+            && hypot(rider.x - map.imageRect.midX, rider.y - map.imageRect.midY) < map.imageRect.width * 0.4
+        if !covered {
+            ("Sin mapa · reintentando" as NSString).draw(
+                at: CGPoint(x: 24 * s, y: 24 * s),
+                withAttributes: [.font: UIFont.systemFont(ofSize: 18 * s, weight: .semibold), .foregroundColor: muted])
         }
         // Route.
         if map.route.count > 1 {
             let path = UIBezierPath()
             for (i, p) in map.route.enumerated() {
-                let q = project(p, rider: rider, heading: map.heading, pixelsPerMapPoint: k, anchor: anchor)
+                let q = project(p, rider: rider, heading: heading, pixelsPerMapPoint: k, anchor: anchor)
                 if i == 0 { path.move(to: q) } else { path.addLine(to: q) }
             }
             path.lineJoinStyle = .round; path.lineCapStyle = .round
@@ -424,7 +469,7 @@ enum DashPicture {
         gold.setFill(); a.fill()
         UIColor.white.setStroke(); a.lineWidth = 2.5 * s; a.stroke()
         // North marker: a small "N" on the edge, so a rotated map stays readable.
-        let north = project(MKMapPoint(x: rider.x, y: rider.y - 1e9), rider: rider, heading: map.heading,
+        let north = project(MKMapPoint(x: rider.x, y: rider.y - 1e9), rider: rider, heading: heading,
                             pixelsPerMapPoint: 1, anchor: .zero)
         let len = max(1, hypot(north.x, north.y))
         let c = CGPoint(x: area.maxX - 26 * s + north.x / len * 14 * s, y: 26 * s + north.y / len * 14 * s)
