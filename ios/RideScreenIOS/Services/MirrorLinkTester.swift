@@ -11,10 +11,11 @@ struct MirrorQR: Equatable {
 
     /// Back to a parseable string, to keep it on the phone between tests.
     var raw: String {
-        var c = URLComponents()
-        c.queryItems = [URLQueryItem(name: "ssid", value: ssid), URLQueryItem(name: "pwd", value: password)]
-            + (modelID.map { [URLQueryItem(name: "modelid", value: $0)] } ?? [])
-        return c.percentEncodedQuery ?? ""
+        // Encode everything but letters and digits: "+", "&" and "=" would break [parse].
+        func enc(_ v: String) -> String { v.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? v }
+        var parts = ["ssid=\(enc(ssid))", "pwd=\(enc(password))"]
+        if let modelID { parts.append("modelid=\(enc(modelID))") }
+        return parts.joined(separator: "&")
     }
 
     static func parse(_ raw: String) -> MirrorQR? {
