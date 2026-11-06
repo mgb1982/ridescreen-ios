@@ -1,9 +1,11 @@
 import SwiftUI
+import MapKit
 import UIKit
 import VisionKit
 
 /// Home card that opens the mirroring field test.
 struct MirrorTestEntryCard: View {
+    @EnvironmentObject private var trips: TripRecordingViewModel
     @State private var showing = false
 
     var body: some View {
@@ -31,7 +33,7 @@ struct MirrorTestEntryCard: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showing) {
-            NavigationStack { MirrorTestScreen() }
+            NavigationStack { MirrorTestScreen() }.environmentObject(trips)
         }
     }
 }
@@ -40,6 +42,10 @@ struct MirrorTestEntryCard: View {
 struct MirrorTestScreen: View {
     @StateObject private var tester = MirrorLinkTester()
     @StateObject private var imageTest = DashImageTest()
+    @EnvironmentObject private var trips: TripRecordingViewModel
+    /// The dash QR (Wi‑Fi name and password) and the dash address are kept on this phone.
+    @AppStorage("dash.qr") private var savedQR = ""
+    @AppStorage("dash.host") private var savedHost = ""
     @State private var qr: MirrorQR?
     @State private var showingScanner = false
     @State private var pasted = ""
@@ -76,6 +82,18 @@ struct MirrorTestScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             isCaptured = UIScreen.main.isCaptured
         }
+        .onAppear {
+            if qr == nil, let restored = MirrorQR.parse(savedQR) { qr = restored }
+            if tester.bikeHost.isEmpty { tester.bikeHost = savedHost }
+            let recorder = trips
+            imageTest.startTrip = { [weak recorder] in recorder?.startForDash() ?? false }
+            imageTest.stopTrip = { [weak recorder] in recorder?.stopTapped() }
+            if DashImageTest.autoStart && !imageTest.isRunning && !tester.isRunning {
+                imageTest.start(host: tester.bikeHost)
+            }
+        }
+        .onChange(of: qr) { value in if let value { savedQR = value.raw } }
+        .onChange(of: tester.bikeHost) { value in savedHost = value }
         .onDisappear { tester.stop(); imageTest.stop() }
     }
 
@@ -161,6 +179,7 @@ struct MirrorTestScreen: View {
                 .font(RideFont.regular(13))
                 .foregroundStyle(RideBrand.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            DashDestinationPicker(navigator: imageTest.navigator)
             HStack(spacing: 10) {
                 Button {
                     if imageTest.isRunning {
@@ -189,6 +208,12 @@ struct MirrorTestScreen: View {
                     } label: { Image(systemName: copied == "imagelog" ? "checkmark" : "doc.on.doc") }
                     ShareLink(item: imageTest.logText) { Image(systemName: "square.and.arrow.up") }
                 }
+            }
+            if !imageTest.isRunning && DashImageTest.hasPreviousLog {
+                ShareLink(item: DashImageTest.previousLogURL) {
+                    Label("dash.log.previous", systemImage: "clock.arrow.circlepath")
+                }
+                .font(RideFont.medium(13))
             }
             if !imageTest.lines.isEmpty {
                 ScrollView(.horizontal) {
@@ -303,6 +328,66 @@ struct QRScannerView: UIViewControllerRepresentable {
                     scanner.stopScanning()
                     onCode(value)
                     return
+                }
+            }
+        }
+    }
+}
+
+/// Destination for the dash navigation: search (Apple Maps), pick, clear.
+private struct DashDestinationPicker: View {
+    @ObservedObject var navigator: DashNavigator
+    @State private var query = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let name = navigator.destinationName {
+                HStack(spacing: 8) {
+                    Image(systemName: "flag.checkered").foregroundStyle(RideBrand.gold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: name).font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                        if let summary = navigator.routeSummary {
+                            Text(verbatim: summary).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(role: .destructive) { navigator.clearDestination() } label: {
+                        Label("dash.nav.clear", systemImage: "xmark.circle.fill")
+                    }
+                    .font(RideFont.medium(13))
+                }
+            } else {
+                HStack(spacing: 8) {
+                    TextField("dash.nav.placeholder", text: $query)
+                        .font(RideFont.regular(14))
+                        .submitLabel(.search)
+                        .onSubmit { navigator.search(query) }
+                        .padding(10)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 10))
+                    if navigator.searching {
+                        ProgressView()
+                    } else {
+                        Button { navigator.search(query) } label: { Image(systemName: "magnifyingglass") }
+                            .disabled(query.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+                if !navigator.hasFix {
+                    Text("dash.nav.noFix").font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                }
+                ForEach(Array(navigator.results.enumerated()), id: \.offset) { _, item in
+                    Button { navigator.setDestination(item); query = "" } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: item.name ?? "—").font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                            if let address = item.placemark.title {
+                                Text(verbatim: address).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
