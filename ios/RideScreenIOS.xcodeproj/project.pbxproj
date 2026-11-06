@@ -39,6 +39,10 @@
 		B30000000000000000000001 /* PXCWireCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30000000000000000000002 /* PXCWireCodec.swift */; };
 		B40000000000000000000001 /* MirrorLinkTester.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000002 /* MirrorLinkTester.swift */; };
 		B40000000000000000000003 /* MirrorTestScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000004 /* MirrorTestScreen.swift */; };
+		B40000000000000000000005 /* DashProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000006 /* DashProtocol.swift */; };
+		B40000000000000000000007 /* DashLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000008 /* DashLink.swift */; };
+		B40000000000000000000009 /* DashPictureSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000010 /* DashPictureSource.swift */; };
+		B40000000000000000000011 /* DashImageTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40000000000000000000012 /* DashImageTest.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -78,6 +82,10 @@
 		B30000000000000000000002 /* PXCWireCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PXCWireCodec.swift; sourceTree = "<group>"; };
 		B40000000000000000000002 /* MirrorLinkTester.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorLinkTester.swift; sourceTree = "<group>"; };
 		B40000000000000000000004 /* MirrorTestScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorTestScreen.swift; sourceTree = "<group>"; };
+		B40000000000000000000006 /* DashProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashProtocol.swift; sourceTree = "<group>"; };
+		B40000000000000000000008 /* DashLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashLink.swift; sourceTree = "<group>"; };
+		B40000000000000000000010 /* DashPictureSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashPictureSource.swift; sourceTree = "<group>"; };
+		B40000000000000000000012 /* DashImageTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashImageTest.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +102,10 @@
 				C10000000000000000000003 /* TripDiagnosticsLogger.swift */,
 				B30000000000000000000002 /* PXCWireCodec.swift */,
 				B40000000000000000000002 /* MirrorLinkTester.swift */,
+				B40000000000000000000006 /* DashProtocol.swift */,
+				B40000000000000000000008 /* DashLink.swift */,
+				B40000000000000000000010 /* DashPictureSource.swift */,
+				B40000000000000000000012 /* DashImageTest.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -334,6 +346,10 @@
 				B10000000000000000000008 /* TripGPXExporter.swift in Sources */,
 				B30000000000000000000001 /* PXCWireCodec.swift in Sources */,
 				B40000000000000000000001 /* MirrorLinkTester.swift in Sources */,
+				B40000000000000000000005 /* DashProtocol.swift in Sources */,
+				B40000000000000000000007 /* DashLink.swift in Sources */,
+				B40000000000000000000009 /* DashPictureSource.swift in Sources */,
+				B40000000000000000000011 /* DashImageTest.swift in Sources */,
 				B40000000000000000000003 /* MirrorTestScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

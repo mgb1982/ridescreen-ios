@@ -39,6 +39,7 @@ struct MirrorTestEntryCard: View {
 /// Field test: 1) read the dash QR, 2) join its Wi‑Fi, 3) check EasyConn and the callback, 4) try capture.
 struct MirrorTestScreen: View {
     @StateObject private var tester = MirrorLinkTester()
+    @StateObject private var imageTest = DashImageTest()
     @State private var qr: MirrorQR?
     @State private var showingScanner = false
     @State private var pasted = ""
@@ -57,6 +58,7 @@ struct MirrorTestScreen: View {
                 }
                 step(3, "mirror.test.step3") { linkSection }
                 step(4, "mirror.test.step4") { captureSection }
+                step(5, "dash.image.step") { imageSection }
             }
             .padding(16)
         }
@@ -74,7 +76,7 @@ struct MirrorTestScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             isCaptured = UIScreen.main.isCaptured
         }
-        .onDisappear { tester.stop() }
+        .onDisappear { tester.stop(); imageTest.stop() }
     }
 
     // MARK: Sections
@@ -121,7 +123,7 @@ struct MirrorTestScreen: View {
             }
             HStack(spacing: 10) {
                 Button {
-                    tester.isRunning ? tester.stop() : tester.start()
+                    if tester.isRunning { tester.stop() } else { imageTest.stop(); tester.start() }
                 } label: {
                     Label(LocalizedStringKey(tester.isRunning ? "mirror.test.stop" : "mirror.test.start"),
                           systemImage: tester.isRunning ? "stop.fill" : "play.fill")
@@ -141,6 +143,56 @@ struct MirrorTestScreen: View {
             if !tester.lines.isEmpty {
                 ScrollView(.horizontal) {
                     Text(tester.logText)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(RideBrand.text)
+                        .textSelection(.enabled)
+                        .padding(10)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+
+    /// Step 5: RideScreen's own picture on the dash, kept alive with the phone locked.
+    private var imageSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("dash.image.body")
+                .font(RideFont.regular(13))
+                .foregroundStyle(RideBrand.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                Button {
+                    if imageTest.isRunning {
+                        imageTest.stop()
+                    } else {
+                        tester.stop()   // both tests use ports 10920–10922
+                        imageTest.start(host: tester.bikeHost)
+                    }
+                } label: {
+                    Label(LocalizedStringKey(imageTest.isRunning ? "mirror.test.stop" : "dash.image.start"),
+                          systemImage: imageTest.isRunning ? "stop.fill" : "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(RideBrand.gold)
+                if imageTest.isRunning {
+                    Label(imageTest.streaming ? "\(imageTest.framesSent)" : "…",
+                          systemImage: imageTest.streaming ? "dot.radiowaves.left.and.right" : "hourglass")
+                        .font(RideFont.semiBold(13))
+                        .foregroundStyle(imageTest.streaming ? Color.green : RideBrand.secondary)
+                }
+                Spacer()
+                if !imageTest.lines.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = imageTest.logText
+                        copied = "imagelog"
+                    } label: { Image(systemName: copied == "imagelog" ? "checkmark" : "doc.on.doc") }
+                    ShareLink(item: imageTest.logText) { Image(systemName: "square.and.arrow.up") }
+                }
+            }
+            if !imageTest.lines.isEmpty {
+                ScrollView(.horizontal) {
+                    Text(imageTest.logText)
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(RideBrand.text)
                         .textSelection(.enabled)

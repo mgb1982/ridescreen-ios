@@ -3703,6 +3703,75 @@
           }
         }
       }
+    },
+    "dash.image.step": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imagen propia en el cuadro (móvil bloqueado)"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imatge pròpia al quadre (mòbil bloquejat)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Own picture on the dash (phone locked)"
+          }
+        }
+      }
+    },
+    "dash.image.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con el Wi‑Fi de la moto conectado y la app de Android cerrada, pulsa Iniciar. Cuando el cuadro muestre la velocidad, la hora y el mapa, bloquea el iPhone y mira si la hora del cuadro sigue avanzando. Después comparte el registro."
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amb el Wi‑Fi de la moto connectat i l’app d’Android tancada, prem Inicia. Quan el quadre mostri la velocitat, l’hora i el mapa, bloqueja l’iPhone i mira si l’hora del quadre continua avançant. Després comparteix el registre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With the bike's Wi‑Fi joined and the Android app closed, tap Start. When the dash shows speed, time and map, lock the iPhone and check whether the time on the dash keeps moving. Then share the log."
+          }
+        }
+      }
+    },
+    "dash.image.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
