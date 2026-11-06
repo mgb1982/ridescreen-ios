@@ -200,7 +200,7 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     /// much the test costs per hour and whether the picture keeps up.
     private func logMinute() {
         let sent = link?.sentCount ?? 0
-        let stats = source?.takeStats() ?? (0, 0)
+        let stats = source?.takeStats() ?? (frames: 0, drawMs: 0)
         let gps = fixCount > 0
             ? String(format: "GPS %ld fijaciones, retraso medio %.1f s (máx %.1f)", fixCount, fixDelaySum / Double(fixCount), fixDelayMax)
             : "GPS sin fijaciones"
