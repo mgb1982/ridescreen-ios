@@ -98,7 +98,9 @@ final class DashPictureSource: DashFrameSource {
         var s: VTCompressionSession?
         let status = VTCompressionSessionCreate(
             allocator: nil, width: Int32(width), height: Int32(height), codecType: kCMVideoCodecType_H264,
-            encoderSpecification: nil, imageBufferAttributes: nil, compressedDataAllocator: nil,
+            // BGRA pool: we draw with CoreGraphics. Without this the pool hands out the encoder's
+            // native biplanar YUV buffers, CGContext can't draw into them and no frame is ever encoded.
+            encoderSpecification: nil, imageBufferAttributes: Self.bgraAttributes, compressedDataAllocator: nil,
             outputCallback: nil, refcon: nil, compressionSessionOut: &s)
         guard status == noErr, let s else {
             log("[ENC] !! could not create the H.264 encoder (status \(status))")
@@ -162,6 +164,9 @@ final class DashPictureSource: DashFrameSource {
                 self.encodeFailures = 0
             }
             self.encodedFrames += 1
+            if self.encodedFrames == 1 || self.encodedFrames % 300 == 0 {
+                self.log("[ENC] encoded frame #\(self.encodedFrames) (\(data.count)b, key=\(key))")
+            }
         }
         onNewFrame?()
     }
@@ -193,13 +198,29 @@ final class DashPictureSource: DashFrameSource {
 
     // MARK: Drawing
 
+    private static let bgraAttributes = [kCVPixelBufferPixelFormatTypeKey: kCVPixelFormatType_32BGRA,
+                                         kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
+                                         kCVPixelBufferCGImageCompatibilityKey: true,
+                                         kCVPixelBufferCGBitmapContextCompatibilityKey: true] as CFDictionary
+    private var renderFailures = 0
+
     private func render() -> CVPixelBuffer? {
+        let pb = drawFrame()
+        if pb == nil {
+            renderFailures += 1
+            if renderFailures == 1 || renderFailures % 50 == 0 { log("[ENC] !! could not draw the picture (#\(renderFailures))") }
+        }
+        return pb
+    }
+
+    private func drawFrame() -> CVPixelBuffer? {
         var pb: CVPixelBuffer?
         let attrs = [kCVPixelBufferIOSurfacePropertiesKey: [:] as CFDictionary,
                      kCVPixelBufferCGImageCompatibilityKey: true,
                      kCVPixelBufferCGBitmapContextCompatibilityKey: true] as CFDictionary
         if let pool = session.flatMap({ VTCompressionSessionGetPixelBufferPool($0) }) {
             CVPixelBufferPoolCreatePixelBuffer(nil, pool, &pb)
+            if let made = pb, CVPixelBufferGetPixelFormatType(made) != kCVPixelFormatType_32BGRA { pb = nil }
         }
         if pb == nil {
             CVPixelBufferCreate(nil, width, height, kCVPixelFormatType_32BGRA, attrs, &pb)
@@ -216,6 +237,7 @@ final class DashPictureSource: DashFrameSource {
         let speed = speedKmh, state = appState, mapImage = map, note = mapNote
         lock.unlock()
         let frames = encodedFrames
+        if encodedFrames == 0 && frameIndex == 0 { log("[ENC] drawing \(CVPixelBufferGetWidth(pb))x\(CVPixelBufferGetHeight(pb)) BGRA") }
         ctx.translateBy(x: 0, y: CGFloat(height))
         ctx.scaleBy(x: 1, y: -1)
         UIGraphicsPushContext(ctx)
