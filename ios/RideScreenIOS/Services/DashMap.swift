@@ -116,7 +116,7 @@ enum DashGeo {
 }
 
 /// A manoeuvre of the route: where it is, what to show.
-struct DashManeuver: Equatable {
+struct DashManeuver {
     let point: MKMapPoint
     let instruction: String
     let turn: DashTurn
