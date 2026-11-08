@@ -37,6 +37,7 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     /// Trip recording started with the picture (stopped with it).
     var startTrip: (() -> Bool)?
     var stopTrip: (() -> Void)?
+    var tripMetrics: (() -> TripLiveMetrics?)?
     private var tripStartedHere = false
 
     /// Start the picture as soon as the test screen opens (set after the first time the dash shows it).
@@ -160,6 +161,10 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     private func tickUI() {
         framesSent = link?.sentCount ?? framesSent
         source?.update(speedKmh: lastLocation.flatMap { $0.speed >= 0 ? $0.speed * 3.6 : nil }, appState: appState)
+        let device = UIDevice.current
+        source?.setExtras(DashExtras(trip: tripStartedHere ? tripMetrics?() : nil,
+                                     battery: device.batteryLevel < 0 ? nil : device.batteryLevel,
+                                     charging: device.batteryState == .charging || device.batteryState == .full))
     }
 
     private func observeAppState() {

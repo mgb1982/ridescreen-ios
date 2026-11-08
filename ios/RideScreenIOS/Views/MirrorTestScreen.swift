@@ -88,6 +88,7 @@ struct MirrorTestScreen: View {
             let recorder = trips
             imageTest.startTrip = { [weak recorder] in recorder?.startForDash() ?? false }
             imageTest.stopTrip = { [weak recorder] in recorder?.stopTapped() }
+            imageTest.tripMetrics = { [weak recorder] in recorder?.liveMetrics }
             if DashImageTest.autoStart && !imageTest.isRunning && !tester.isRunning {
                 imageTest.start(host: tester.bikeHost)
             }

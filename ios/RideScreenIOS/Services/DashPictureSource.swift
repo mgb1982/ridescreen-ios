@@ -51,6 +51,10 @@ final class DashPictureSource: DashFrameSource {
         self.log = log
     }
 
+    /// Trip so far and phone battery, for the panel (updated once a second).
+    func setExtras(_ extras: DashExtras) { lock.lock(); self.extras = extras; lock.unlock() }
+    private var extras = DashExtras()
+
     func update(speedKmh: Double?, appState: String) {
         lock.lock(); self.speedKmh = speedKmh; self.appState = appState; lock.unlock()
     }
@@ -254,7 +258,7 @@ final class DashPictureSource: DashFrameSource {
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
         lock.lock()
-        let state = appState, map = mapState
+        let state = appState, map = mapState, extras = self.extras
         lock.unlock()
         let now = Date()
         // Speed from the latest fix pushed forward by its acceleration; "—" when GPS is lost.
@@ -277,7 +281,7 @@ final class DashPictureSource: DashFrameSource {
         UIGraphicsPushContext(ctx)
         defer { UIGraphicsPopContext() }
         DashPicture.draw(in: CGRect(x: 0, y: 0, width: width, height: height), speedKmh: speed, state: state,
-                         map: map, rider: shownRider, heading: shownHeading, now: now, frames: frames)
+                         map: map, rider: shownRider, heading: shownHeading, now: now, frames: frames, extras: extras)
         return pb
     }
 
@@ -344,7 +348,7 @@ enum DashPicture {
     static let riderAnchor = CGPoint(x: 250, y: 236)
 
     static func draw(in rect: CGRect, speedKmh: Double?, state: String, map: DashMapState, rider: MKMapPoint?,
-                     heading: Double, now: Date, frames: Int) {
+                     heading: Double, now: Date, frames: Int, extras: DashExtras = DashExtras()) {
         let s = rect.height / 416
         UIColor(red: 0.04, green: 0.05, blue: 0.06, alpha: 1).setFill(); UIRectFill(rect)
         let gold = UIColor(red: 1, green: 0.62, blue: 0.16, alpha: 1)
@@ -392,7 +396,26 @@ enum DashPicture {
             let w = text(speedText, 515, 24, 110, .white, bold: true).width / s
             text("km/h", 515 + w + 10, 104, 22, muted)
             text(clock, 515, 160, 34, gold, bold: true)
-            text("Sin destino", 515, 222, 18, muted)
+            if let trip = extras.trip, trip.distanceMeters > 50 {
+                let km = String(format: "%.1f km", trip.distanceMeters / 1000)
+                let minutes = Int(trip.elapsedSeconds / 60)
+                text("\(km) · \(minutes / 60):\(String(format: "%02d", minutes % 60))", 515, 212, 22, .white, bold: true)
+                let avg = trip.elapsedSeconds > 0 ? trip.distanceMeters / trip.elapsedSeconds * 3.6 : 0
+                text("Media \(Int(avg.rounded())) · Máx \(Int((trip.maximumSpeedMetersPerSecond * 3.6).rounded()))", 515, 244, 18, muted)
+            } else {
+                text("Sin destino", 515, 222, 18, muted)
+            }
+        }
+
+        // Phone battery low (and not charging): warn on the dash, top-left of the map.
+        if let level = extras.battery, level < 0.2, !extras.charging {
+            let warn = "Batería del móvil \(Int((level * 100).rounded())) %"
+            let font = UIFont.systemFont(ofSize: 16 * s, weight: .bold)
+            let size = (warn as NSString).size(withAttributes: [.font: font])
+            UIColor(red: 0.75, green: 0.12, blue: 0.1, alpha: 0.9).setFill()
+            UIBezierPath(roundedRect: CGRect(x: 8 * s, y: 8 * s, width: size.width + 16 * s, height: size.height + 8 * s),
+                         cornerRadius: 6 * s).fill()
+            (warn as NSString).draw(at: CGPoint(x: 16 * s, y: 12 * s), withAttributes: [.font: font, .foregroundColor: UIColor.white])
         }
 
         // Status (small, bottom-left of the map, above the dash strip).
@@ -487,4 +510,11 @@ enum DashPicture {
         f.minimumFractionDigits = 1; f.maximumFractionDigits = 1
         return "\(f.string(from: NSNumber(value: meters / 1_000)) ?? "?") km"
     }
+}
+
+/// Extra panel data that does not come from the map: the trip being recorded and the phone battery.
+struct DashExtras {
+    var trip: TripLiveMetrics?
+    var battery: Float?
+    var charging = false
 }
