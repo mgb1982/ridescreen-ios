@@ -52,7 +52,7 @@ struct DashPlaceEntity: AppEntity {
     static var defaultQuery = DashPlaceQuery()
     var id: String
     var name: String
-    var displayRepresentation: DisplayRepresentation { "\(name)" }
+    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: LocalizedStringResource(stringLiteral: name)) }
 }
 
 struct DashPlaceQuery: EntityQuery, EntityStringQuery {

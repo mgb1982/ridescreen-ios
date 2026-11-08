@@ -90,7 +90,7 @@ final class DashNavigator: ObservableObject {
             if state.note != "sin mapa" { state.note = "sin mapa"; log("Sin mapa guardado para esta zona") }
             return
         }
-        if best.rect == state.imageRect { return }
+        if MKMapRectEqualToRect(best.rect, state.imageRect) { return }
         guard let image = UIImage(data: best.jpeg)?.cgImage else { return }
         state.image = image
         state.imageRect = best.rect
