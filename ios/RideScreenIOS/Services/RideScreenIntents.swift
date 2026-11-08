@@ -93,13 +93,24 @@ struct RideScreenShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: BikeKeylessIntent(action: .unlock), phrases: [
             "Desbloquea la moto con \(.applicationName)",
+            "Desbloquea mi moto con \(.applicationName)",
+            "Desbloquear la moto con \(.applicationName)",
+            "Desbloquear mi moto con \(.applicationName)",
             "Abre la moto con \(.applicationName)",
+            "Abre mi moto con \(.applicationName)",
+            "Desbloquea con \(.applicationName)",
         ])
         AppShortcut(intent: BikeKeylessIntent(action: .seat), phrases: [
             "Abre el asiento con \(.applicationName)",
+            "Abre el asiento de la moto con \(.applicationName)",
+            "Abre el asiento de mi moto con \(.applicationName)",
+            "Abrir el asiento con \(.applicationName)",
         ])
         AppShortcut(intent: BikeKeylessIntent(action: .fuel), phrases: [
             "Abre el depósito con \(.applicationName)",
+            "Abre el depósito de la moto con \(.applicationName)",
+            "Abre el depósito de mi moto con \(.applicationName)",
+            "Abrir el depósito con \(.applicationName)",
         ])
         AppShortcut(intent: NavigateToPlaceIntent(), phrases: [
             "Llévame a \(\.$place) con \(.applicationName)",
