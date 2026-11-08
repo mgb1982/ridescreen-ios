@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreMedia
 import CoreVideo
+import MapKit
 import Foundation
 import UIKit
 import VideoToolbox
@@ -33,23 +34,39 @@ final class DashPictureSource: DashFrameSource {
     private var frameIndex: Int64 = 0
     private var encodeFailures = 0
     private var encodedFrames = 0
+    // Smoothed rider position/heading actually drawn (on [q]).
+    private var shownRider: MKMapPoint?
+    private var shownHeading: Double = 0
+    private var tickCount = 0
+    // Stats for the per-minute log line (guarded by [lock]).
+    private var statFrames = 0
+    private var statDrawSeconds = 0.0
 
     // Inputs from the UI (guarded by [lock]).
     private var speedKmh: Double?
     private var appState = "app abierta"
-    private var map: CGImage?
-    private var mapNote = "mapa: esperando ubicación"
+    private var mapState = DashMapState()
 
     init(log: @escaping (String) -> Void) {
         self.log = log
     }
 
+    /// Trip so far and phone battery, for the panel (updated once a second).
+    func setExtras(_ extras: DashExtras) { lock.lock(); self.extras = extras; lock.unlock() }
+    private var extras = DashExtras()
+
     func update(speedKmh: Double?, appState: String) {
         lock.lock(); self.speedKmh = speedKmh; self.appState = appState; lock.unlock()
     }
 
-    func setMap(_ image: CGImage?, note: String) {
-        lock.lock(); if let image { map = image }; mapNote = note; lock.unlock()
+    /// Frames encoded and average drawing time since the last call (for the per-minute log line).
+    func takeStats() -> (frames: Int, drawMs: Double) {
+        lock.lock(); defer { statFrames = 0; statDrawSeconds = 0; lock.unlock() }
+        return (statFrames, statFrames > 0 ? statDrawSeconds / Double(statFrames) * 1000 : 0)
+    }
+
+    func setMapState(_ state: DashMapState) {
+        lock.lock(); mapState = state; lock.unlock()
     }
 
     // MARK: DashFrameSource
@@ -129,9 +146,16 @@ final class DashPictureSource: DashFrameSource {
     }
 
     private func tick() {
+        tickCount += 1
+        // Parked: 2 fps is plenty and saves battery. Moving: 10 fps. A requested keyframe goes now.
+        lock.lock(); let moving = mapState.speed > 1 || mapState.fix == nil; lock.unlock()
+        if !forceKeyframe && !moving && tickCount % 5 != 0 { return }
         if session == nil { makeSession() }
+        let drawStart = CFAbsoluteTimeGetCurrent()
         guard let session, let buffer = render() else { return }
-        let pts = CMTime(value: frameIndex, timescale: 10)
+        let drawTime = CFAbsoluteTimeGetCurrent() - drawStart
+        lock.lock(); statFrames += 1; statDrawSeconds += drawTime; lock.unlock()
+        let pts = CMTime(value: Int64(tickCount), timescale: 10)
         frameIndex += 1
         let props: CFDictionary? = forceKeyframe ? [kVTEncodeFrameOptionKey_ForceKeyFrame: kCFBooleanTrue] as CFDictionary : nil
         let status = VTCompressionSessionEncodeFrame(
@@ -234,8 +258,22 @@ final class DashPictureSource: DashFrameSource {
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
         lock.lock()
-        let speed = speedKmh, state = appState, mapImage = map, note = mapNote
+        let state = appState, map = mapState, extras = self.extras
         lock.unlock()
+        let now = Date()
+        // Speed from the latest fix pushed forward by its acceleration; "—" when GPS is lost.
+        let speed = map.speedKmh(at: now)
+        // Ease towards the extrapolated position and heading instead of jumping on every fix.
+        if let target = map.position(at: now) {
+            if let shown = shownRider, shown.distance(to: target) < 150 {
+                shownRider = MKMapPoint(x: shown.x + (target.x - shown.x) * 0.35, y: shown.y + (target.y - shown.y) * 0.35)
+                shownHeading = DashGeo.normalize(shownHeading + DashGeo.normalize(map.heading - shownHeading) * 0.3)
+            } else {
+                shownRider = target; shownHeading = map.heading
+            }
+        } else {
+            shownRider = nil
+        }
         let frames = encodedFrames
         if encodedFrames == 0 && frameIndex == 0 { log("[ENC] drawing \(CVPixelBufferGetWidth(pb))x\(CVPixelBufferGetHeight(pb)) BGRA") }
         ctx.translateBy(x: 0, y: CGFloat(height))
@@ -243,7 +281,7 @@ final class DashPictureSource: DashFrameSource {
         UIGraphicsPushContext(ctx)
         defer { UIGraphicsPopContext() }
         DashPicture.draw(in: CGRect(x: 0, y: 0, width: width, height: height), speedKmh: speed, state: state,
-                         map: mapImage, mapNote: note, frames: frames)
+                         map: map, rider: shownRider, heading: shownHeading, now: now, frames: frames, extras: extras)
         return pb
     }
 
@@ -301,50 +339,182 @@ final class DashPictureSource: DashFrameSource {
     }
 }
 
-/// The test picture: speed, clock, app state and a map snapshot, laid out for the 125X window
-/// (nothing readable below y≈326, nor below y≈284 right of x≈676, on the 800×416 design size).
+/// The dash picture: a moving, heading-up map on the left and the next manoeuvre, speed and clock on
+/// the right, laid out for the 125X window (nothing readable below y≈326, nor below y≈284 right of
+/// x≈676, on the 800×416 design size).
 enum DashPicture {
-    static func draw(in rect: CGRect, speedKmh: Double?, state: String, map: CGImage?, mapNote: String, frames: Int) {
-        let s = rect.height / 416
-        let bg = UIColor(red: 0.04, green: 0.05, blue: 0.06, alpha: 1)
-        bg.setFill(); UIRectFill(rect)
+    static let mapArea = CGRect(x: 0, y: 0, width: 500, height: 326)
+    /// The rider sits low in the map so most of it shows what is ahead.
+    static let riderAnchor = CGPoint(x: 250, y: 236)
 
-        func text(_ str: String, _ x: CGFloat, _ y: CGFloat, _ size: CGFloat, _ color: UIColor, bold: Bool = false) {
-            let font = UIFont.systemFont(ofSize: size * s, weight: bold ? .heavy : .medium)
-            (str as NSString).draw(at: CGPoint(x: x * s, y: y * s), withAttributes: [.font: font, .foregroundColor: color])
-        }
+    static func draw(in rect: CGRect, speedKmh: Double?, state: String, map: DashMapState, rider: MKMapPoint?,
+                     heading: Double, now: Date, frames: Int, extras: DashExtras = DashExtras()) {
+        let s = rect.height / 416
+        UIColor(red: 0.04, green: 0.05, blue: 0.06, alpha: 1).setFill(); UIRectFill(rect)
         let gold = UIColor(red: 1, green: 0.62, blue: 0.16, alpha: 1)
         let muted = UIColor(white: 0.62, alpha: 1)
 
-        // Speed.
-        let speedText = speedKmh.map { String(Int($0.rounded())) } ?? "—"
-        text(speedText, 30, 40, 150, .white, bold: true)
-        text("km/h · GPS", 38, 228, 26, muted)
-
-        // Clock (changes every second: proves the picture is live, not frozen).
-        let clock = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
-        text(clock, 30, 270, 30, gold, bold: true)
-
-        // Map.
-        let mapRect = CGRect(x: 410 * s, y: 22 * s, width: 370 * s, height: 250 * s)
-        let clip = UIBezierPath(roundedRect: mapRect, cornerRadius: 14 * s)
-        if let map {
-            UIGraphicsGetCurrentContext()?.saveGState()
-            clip.addClip()
-            UIImage(cgImage: map).draw(in: mapRect)
-            UIGraphicsGetCurrentContext()?.restoreGState()
-            gold.setFill()
-            UIBezierPath(ovalIn: CGRect(x: mapRect.midX - 7 * s, y: mapRect.midY - 7 * s, width: 14 * s, height: 14 * s)).fill()
-            UIColor.white.setStroke()
-            let ring = UIBezierPath(ovalIn: CGRect(x: mapRect.midX - 9 * s, y: mapRect.midY - 9 * s, width: 18 * s, height: 18 * s))
-            ring.lineWidth = 2 * s; ring.stroke()
-        } else {
-            UIColor(white: 0.12, alpha: 1).setFill(); clip.fill()
+        @discardableResult
+        func text(_ str: String, _ x: CGFloat, _ y: CGFloat, _ size: CGFloat, _ color: UIColor, bold: Bool = false) -> CGSize {
+            let font = UIFont.systemFont(ofSize: size * s, weight: bold ? .heavy : .medium)
+            let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+            (str as NSString).draw(at: CGPoint(x: x * s, y: y * s), withAttributes: attrs)
+            return (str as NSString).size(withAttributes: attrs)
         }
-        UIColor(white: 0.3, alpha: 1).setStroke(); clip.lineWidth = 1.5 * s; clip.stroke()
-        text(mapNote, 418, 278, 15, muted)
 
-        // Status line (left, above the dash strip).
-        text("RideScreen iOS · \(state) · \(frames) img", 30, 302, 16, muted)
+        drawMap(map, rider: rider, heading: heading, scale: s, gold: gold, muted: muted)
+
+        // Right panel.
+        let speedText = speedKmh.map { String(Int($0.rounded())) } ?? "—"
+        let clock = DateFormatter.localizedString(from: now, dateStyle: .none, timeStyle: .short)
+        if let nav = map.nav {
+            if let arrow = UIImage(systemName: nav.turn.symbol,
+                                   withConfiguration: UIImage.SymbolConfiguration(pointSize: 80 * s, weight: .bold)) {
+                let img = arrow.withTintColor(nav.turn == .arrive ? gold : .white, renderingMode: .alwaysOriginal)
+                let box = CGRect(x: 515 * s, y: 18 * s, width: 100 * s, height: 100 * s)
+                let fit = min(box.width / img.size.width, box.height / img.size.height)
+                let size = CGSize(width: img.size.width * fit, height: img.size.height * fit)
+                img.draw(in: CGRect(x: box.midX - size.width / 2, y: box.midY - size.height / 2, width: size.width, height: size.height))
+            }
+            let arrived = nav.turn == .arrive && nav.distance <= 0
+            if !arrived { text(formatDistance(nav.distance), 625, 38, 44, .white, bold: true) }
+            let font = UIFont.systemFont(ofSize: 21 * s, weight: .semibold)
+            let style = NSMutableParagraphStyle(); style.lineBreakMode = .byTruncatingTail
+            (nav.instruction as NSString).draw(
+                with: CGRect(x: 515 * s, y: 128 * s, width: 275 * s, height: 80 * s),
+                options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+                attributes: [.font: font, .foregroundColor: UIColor.white, .paragraphStyle: style], context: nil)
+            if !arrived {
+                let eta = nav.arrival.map { " · " + DateFormatter.localizedString(from: $0, dateStyle: .none, timeStyle: .short) } ?? ""
+                text("Meta \(formatDistance(nav.remaining))\(eta)", 515, 214, 18, muted)
+            }
+            // Speed and clock: left of x≈676 below y≈284 (the dash strip covers the right corner).
+            let w = text(speedText, 515, 236, 56, .white, bold: true).width / s
+            text("km/h", 515 + w + 8, 266, 18, muted)
+            text(clock, 515, 300, 20, gold, bold: true)
+        } else {
+            let w = text(speedText, 515, 24, 110, .white, bold: true).width / s
+            text("km/h", 515 + w + 10, 104, 22, muted)
+            text(clock, 515, 160, 34, gold, bold: true)
+            if let trip = extras.trip, trip.distanceMeters > 50 {
+                let km = String(format: "%.1f km", trip.distanceMeters / 1000)
+                let minutes = Int(trip.elapsedSeconds / 60)
+                text("\(km) · \(minutes / 60):\(String(format: "%02d", minutes % 60))", 515, 212, 22, .white, bold: true)
+                let avg = trip.elapsedSeconds > 0 ? trip.distanceMeters / trip.elapsedSeconds * 3.6 : 0
+                text("Media \(Int(avg.rounded())) · Máx \(Int((trip.maximumSpeedMetersPerSecond * 3.6).rounded()))", 515, 244, 18, muted)
+            } else {
+                text("Sin destino", 515, 222, 18, muted)
+            }
+        }
+
+        // Phone battery low (and not charging): warn on the dash, top-left of the map.
+        if let level = extras.battery, level < 0.2, !extras.charging {
+            let warn = "Batería del móvil \(Int((level * 100).rounded())) %"
+            let font = UIFont.systemFont(ofSize: 16 * s, weight: .bold)
+            let size = (warn as NSString).size(withAttributes: [.font: font])
+            UIColor(red: 0.75, green: 0.12, blue: 0.1, alpha: 0.9).setFill()
+            UIBezierPath(roundedRect: CGRect(x: 8 * s, y: 8 * s, width: size.width + 16 * s, height: size.height + 8 * s),
+                         cornerRadius: 6 * s).fill()
+            (warn as NSString).draw(at: CGPoint(x: 16 * s, y: 12 * s), withAttributes: [.font: font, .foregroundColor: UIColor.white])
+        }
+
+        // Status (small, bottom-left of the map, above the dash strip).
+        let status = "RideScreen iOS · \(state) · \(frames) img" + (map.note.isEmpty ? "" : " · \(map.note)")
+        let font = UIFont.systemFont(ofSize: 12 * s, weight: .medium)
+        let size = (status as NSString).size(withAttributes: [.font: font])
+        UIColor(white: 0, alpha: 0.55).setFill()
+        UIBezierPath(roundedRect: CGRect(x: 6 * s, y: 302 * s, width: size.width + 12 * s, height: size.height + 4 * s),
+                     cornerRadius: 6 * s).fill()
+        (status as NSString).draw(at: CGPoint(x: 12 * s, y: 304 * s), withAttributes: [.font: font, .foregroundColor: muted])
     }
+
+    /// Screen position (design units × scale) of a map point, heading-up around the rider.
+    static func project(_ p: MKMapPoint, rider: MKMapPoint, heading: Double, pixelsPerMapPoint k: Double,
+                        anchor: CGPoint) -> CGPoint {
+        let dx = (p.x - rider.x) * k, dy = (p.y - rider.y) * k
+        let t = -heading * .pi / 180  // rotate the map against the heading so the heading points up
+        return CGPoint(x: anchor.x + CGFloat(dx * cos(t) - dy * sin(t)),
+                       y: anchor.y + CGFloat(dx * sin(t) + dy * cos(t)))
+    }
+
+    private static func drawMap(_ map: DashMapState, rider: MKMapPoint?, heading: Double, scale s: CGFloat,
+                                gold: UIColor, muted: UIColor) {
+        guard let ctx = UIGraphicsGetCurrentContext() else { return }
+        let area = CGRect(x: mapArea.minX * s, y: mapArea.minY * s, width: mapArea.width * s, height: mapArea.height * s)
+        UIColor(white: 0.1, alpha: 1).setFill(); UIRectFill(area)
+        let anchor = CGPoint(x: riderAnchor.x * s, y: riderAnchor.y * s)
+        guard let rider else {
+            (map.note as NSString).draw(at: CGPoint(x: 24 * s, y: 140 * s),
+                                        withAttributes: [.font: UIFont.systemFont(ofSize: 20 * s, weight: .semibold),
+                                                         .foregroundColor: muted])
+            return
+        }
+        let ppm = MKMapPointsPerMeterAtLatitude(rider.coordinate.latitude)
+        let k = Double(area.width) / (map.viewMeters * ppm)
+        ctx.saveGState()
+        ctx.clip(to: area)
+        if let image = map.image, !map.imageRect.isNull {
+            ctx.saveGState()
+            ctx.translateBy(x: anchor.x, y: anchor.y)
+            ctx.rotate(by: CGFloat(-heading * .pi / 180))
+            ctx.scaleBy(x: CGFloat(k), y: CGFloat(k))
+            let r = map.imageRect
+            ctx.interpolationQuality = .low
+            UIImage(cgImage: image).draw(in: CGRect(x: r.minX - rider.x, y: r.minY - rider.y, width: r.width, height: r.height))
+            ctx.restoreGState()
+        }
+        // No map around the rider (no coverage, e.g. after a tunnel): say so; route and arrow still work.
+        let covered = map.image != nil && !map.imageRect.isNull
+            && hypot(rider.x - map.imageRect.midX, rider.y - map.imageRect.midY) < map.imageRect.width * 0.4
+        if !covered {
+            ("Sin mapa · reintentando" as NSString).draw(
+                at: CGPoint(x: 24 * s, y: 24 * s),
+                withAttributes: [.font: UIFont.systemFont(ofSize: 18 * s, weight: .semibold), .foregroundColor: muted])
+        }
+        // Route.
+        if map.route.count > 1 {
+            let path = UIBezierPath()
+            for (i, p) in map.route.enumerated() {
+                let q = project(p, rider: rider, heading: heading, pixelsPerMapPoint: k, anchor: anchor)
+                if i == 0 { path.move(to: q) } else { path.addLine(to: q) }
+            }
+            path.lineJoinStyle = .round; path.lineCapStyle = .round
+            UIColor(white: 0, alpha: 0.5).setStroke(); path.lineWidth = 11 * s; path.stroke()
+            UIColor(red: 0.25, green: 0.6, blue: 1, alpha: 1).setStroke(); path.lineWidth = 7 * s; path.stroke()
+        }
+        // Rider arrow, always pointing up (heading-up map).
+        let a = UIBezierPath()
+        a.move(to: CGPoint(x: anchor.x, y: anchor.y - 18 * s))
+        a.addLine(to: CGPoint(x: anchor.x + 13 * s, y: anchor.y + 14 * s))
+        a.addLine(to: CGPoint(x: anchor.x, y: anchor.y + 7 * s))
+        a.addLine(to: CGPoint(x: anchor.x - 13 * s, y: anchor.y + 14 * s))
+        a.close()
+        gold.setFill(); a.fill()
+        UIColor.white.setStroke(); a.lineWidth = 2.5 * s; a.stroke()
+        // North marker: a small "N" on the edge, so a rotated map stays readable.
+        let north = project(MKMapPoint(x: rider.x, y: rider.y - 1e9), rider: rider, heading: heading,
+                            pixelsPerMapPoint: 1, anchor: .zero)
+        let len = max(1, hypot(north.x, north.y))
+        let c = CGPoint(x: area.maxX - 26 * s + north.x / len * 14 * s, y: 26 * s + north.y / len * 14 * s)
+        ("N" as NSString).draw(at: CGPoint(x: c.x - 6 * s, y: c.y - 9 * s),
+                               withAttributes: [.font: UIFont.systemFont(ofSize: 15 * s, weight: .heavy), .foregroundColor: gold])
+        ctx.restoreGState()
+        UIColor(white: 0.25, alpha: 1).setFill()
+        UIRectFill(CGRect(x: area.maxX, y: 0, width: 2 * s, height: area.height))
+    }
+
+    static func formatDistance(_ meters: Double) -> String {
+        if meters < 1_000 { return "\(Int((meters / 10).rounded()) * 10) m" }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = 1; f.maximumFractionDigits = 1
+        return "\(f.string(from: NSNumber(value: meters / 1_000)) ?? "?") km"
+    }
+}
+
+/// Extra panel data that does not come from the map: the trip being recorded and the phone battery.
+struct DashExtras {
+    var trip: TripLiveMetrics?
+    var battery: Float?
+    var charging = false
 }

@@ -1,9 +1,11 @@
 import SwiftUI
+import MapKit
 import UIKit
 import VisionKit
 
 /// Home card that opens the mirroring field test.
 struct MirrorTestEntryCard: View {
+    @EnvironmentObject private var trips: TripRecordingViewModel
     @State private var showing = false
 
     var body: some View {
@@ -31,7 +33,7 @@ struct MirrorTestEntryCard: View {
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showing) {
-            NavigationStack { MirrorTestScreen() }
+            NavigationStack { MirrorTestScreen() }.environmentObject(trips)
         }
     }
 }
@@ -39,7 +41,11 @@ struct MirrorTestEntryCard: View {
 /// Field test: 1) read the dash QR, 2) join its Wi‑Fi, 3) check EasyConn and the callback, 4) try capture.
 struct MirrorTestScreen: View {
     @StateObject private var tester = MirrorLinkTester()
-    @StateObject private var imageTest = DashImageTest()
+    @ObservedObject private var imageTest = DashImageTest.shared
+    @EnvironmentObject private var trips: TripRecordingViewModel
+    /// The dash QR (Wi‑Fi name and password) and the dash address are kept on this phone.
+    @AppStorage("dash.qr") private var savedQR = ""
+    @AppStorage("dash.host") private var savedHost = ""
     @State private var qr: MirrorQR?
     @State private var showingScanner = false
     @State private var pasted = ""
@@ -76,6 +82,19 @@ struct MirrorTestScreen: View {
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             isCaptured = UIScreen.main.isCaptured
         }
+        .onAppear {
+            if qr == nil, let restored = MirrorQR.parse(savedQR) { qr = restored }
+            if tester.bikeHost.isEmpty { tester.bikeHost = savedHost }
+            let recorder = trips
+            imageTest.startTrip = { [weak recorder] in recorder?.startForDash() ?? false }
+            imageTest.stopTrip = { [weak recorder] in recorder?.stopTapped() }
+            imageTest.tripMetrics = { [weak recorder] in recorder?.liveMetrics }
+            if DashImageTest.autoStart && !imageTest.isRunning && !tester.isRunning {
+                imageTest.start(host: tester.bikeHost)
+            }
+        }
+        .onChange(of: qr) { value in if let value { savedQR = value.raw } }
+        .onChange(of: tester.bikeHost) { value in savedHost = value }
         .onDisappear { tester.stop(); imageTest.stop() }
     }
 
@@ -161,6 +180,7 @@ struct MirrorTestScreen: View {
                 .font(RideFont.regular(13))
                 .foregroundStyle(RideBrand.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            DashDestinationPicker(navigator: imageTest.navigator)
             HStack(spacing: 10) {
                 Button {
                     if imageTest.isRunning {
@@ -189,6 +209,12 @@ struct MirrorTestScreen: View {
                     } label: { Image(systemName: copied == "imagelog" ? "checkmark" : "doc.on.doc") }
                     ShareLink(item: imageTest.logText) { Image(systemName: "square.and.arrow.up") }
                 }
+            }
+            if !imageTest.isRunning && DashImageTest.hasPreviousLog {
+                ShareLink(item: DashImageTest.previousLogURL) {
+                    Label("dash.log.previous", systemImage: "clock.arrow.circlepath")
+                }
+                .font(RideFont.medium(13))
             }
             if !imageTest.lines.isEmpty {
                 ScrollView(.horizontal) {
@@ -305,6 +331,129 @@ struct QRScannerView: UIViewControllerRepresentable {
                     return
                 }
             }
+        }
+    }
+}
+
+/// Destination for the dash navigation: search (Apple Maps), pick, clear.
+private struct DashDestinationPicker: View {
+    @ObservedObject var navigator: DashNavigator
+    @State private var query = ""
+    @State private var places = DashPlaces.all
+    @State private var renaming: DashPlace?
+    @State private var newName = ""
+    @State private var tilesInfo = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let name = navigator.destinationName {
+                HStack(spacing: 8) {
+                    Image(systemName: "flag.checkered").foregroundStyle(RideBrand.gold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: name).font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                        if let summary = navigator.routeSummary {
+                            Text(verbatim: summary).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(role: .destructive) { navigator.clearDestination() } label: {
+                        Label("dash.nav.clear", systemImage: "xmark.circle.fill")
+                    }
+                    .font(RideFont.medium(13))
+                }
+            } else {
+                HStack(spacing: 8) {
+                    TextField("dash.nav.placeholder", text: $query)
+                        .font(RideFont.regular(14))
+                        .submitLabel(.search)
+                        .onSubmit { navigator.search(query) }
+                        .padding(10)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 10))
+                    if navigator.searching {
+                        ProgressView()
+                    } else {
+                        Button { navigator.search(query) } label: { Image(systemName: "magnifyingglass") }
+                            .disabled(query.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+                if !navigator.hasFix {
+                    Text("dash.nav.noFix").font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                }
+                ForEach(Array(navigator.results.enumerated()), id: \.offset) { _, item in
+                    Button { navigator.setDestination(item); query = "" } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: item.name ?? "—").font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                            if let address = item.placemark.title {
+                                Text(verbatim: address).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+                if navigator.results.isEmpty && !places.isEmpty {
+                    Text("dash.nav.saved").font(RideFont.semiBold(12)).foregroundStyle(RideBrand.secondary)
+                    ForEach(places.sorted { $0.favourite && !$1.favourite }) { place in
+                        HStack(spacing: 8) {
+                            Button { navigator.setDestination(place.mapItem); places = DashPlaces.all } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(verbatim: place.name).font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                                    if !place.address.isEmpty {
+                                        Text(verbatim: place.address).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary).lineLimit(1)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            Button { DashPlaces.toggleFavourite(place.id); places = DashPlaces.all } label: {
+                                Image(systemName: place.favourite ? "star.fill" : "star")
+                                    .foregroundStyle(place.favourite ? RideBrand.gold : RideBrand.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(8)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 8))
+                        .contextMenu {
+                            Button { newName = place.name; renaming = place } label: { Label("dash.nav.rename", systemImage: "pencil") }
+                            Button(role: .destructive) { DashPlaces.remove(place.id); places = DashPlaces.all } label: {
+                                Label("dash.nav.delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                    Text("dash.nav.siriHint").font(RideFont.regular(11)).foregroundStyle(RideBrand.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            HStack(spacing: 10) {
+                if let progress = navigator.areaProgress {
+                    ProgressView().controlSize(.small)
+                    Text(verbatim: progress).font(RideFont.medium(12)).foregroundStyle(RideBrand.secondary)
+                    Button("pke.cancel") { navigator.cancelAreaDownload() }.font(RideFont.medium(12))
+                } else {
+                    Menu {
+                        ForEach([10, 25, 50], id: \.self) { km in
+                            Button("\(km) km") { navigator.downloadArea(radiusKm: Double(km)) }
+                        }
+                        Button("dash.map.clear", role: .destructive) { navigator.tiles.clear(); tilesInfo = navigator.tiles.summary }
+                    } label: {
+                        Label("dash.map.download", systemImage: "square.and.arrow.down.on.square")
+                    }
+                    .font(RideFont.medium(13))
+                    .disabled(!navigator.hasFix)
+                    Text(verbatim: tilesInfo).font(RideFont.regular(11)).foregroundStyle(RideBrand.secondary)
+                }
+            }
+        }
+        .onAppear { places = DashPlaces.all; tilesInfo = navigator.tiles.summary }
+        .onChange(of: navigator.areaProgress) { _ in tilesInfo = navigator.tiles.summary }
+        .onChange(of: navigator.destinationName) { _ in places = DashPlaces.all }
+        .alert("dash.nav.rename", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("dash.nav.renamePlaceholder", text: $newName)
+            Button("pke.save") { if let r = renaming { DashPlaces.rename(r.id, to: newName); places = DashPlaces.all }; renaming = nil }
+            Button("pke.cancel", role: .cancel) { renaming = nil }
         }
     }
 }

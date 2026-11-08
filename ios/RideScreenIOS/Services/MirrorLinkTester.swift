@@ -9,6 +9,15 @@ struct MirrorQR: Equatable {
     let password: String
     let modelID: String?
 
+    /// Back to a parseable string, to keep it on the phone between tests.
+    var raw: String {
+        // Encode everything but letters and digits: "+", "&" and "=" would break [parse].
+        func enc(_ v: String) -> String { v.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? v }
+        var parts = ["ssid=\(enc(ssid))", "pwd=\(enc(password))"]
+        if let modelID { parts.append("modelid=\(enc(modelID))") }
+        return parts.joined(separator: "&")
+    }
+
     static func parse(_ raw: String) -> MirrorQR? {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
