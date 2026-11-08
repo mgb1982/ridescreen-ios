@@ -61,7 +61,13 @@ enum PKEProtocol {
         return aes(key: Data(session), block: Data(block))
     }
     static func actionFrame(code: String, action: PKEAction, cipher: Data) -> Data {
-        frame(code: code, command: "001,\(action.rawValue),\(cipher.map { String(format: "%02X", $0) }.joined())")
+        // Lowercase hex, exactly as the Android app sends it (confirmed working on the bike).
+        frame(code: code, command: "001,\(action.rawValue),\(cipher.map { String(format: "%02x", $0) }.joined())")
+    }
+    /** Last field of a reply (the box's result flag), safe to log: no code, no cipher. */
+    static func ackTail(_ reply: String) -> String {
+        let last = reply.replacingOccurrences(of: "#", with: "").components(separatedBy: ",").last ?? ""
+        return last.count <= 2 ? last : "(\(last.count) chars)"
     }
     private static func hex(_ s: String) -> Data? {
         guard s.count.isMultiple(of: 2) else { return nil }
@@ -157,7 +163,9 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         let challengeReply = try await ask(code: code, command: "008")
         voltage = PKEProtocol.voltage(challengeReply)
         guard let nonce = PKEProtocol.challenge(challengeReply), let cipher = PKEProtocol.derive(code: code, mcuID: mcu, challenge: nonce) else { throw PKEError.badReply }
-        _ = try await exchange(PKEProtocol.actionFrame(code: code, action: action, cipher: cipher), command: "001")
+        log("action request sent: 001,\(action.rawValue),<cipher>; waiting for response")
+        let ack = try await exchange(PKEProtocol.actionFrame(code: code, action: action, cipher: cipher), command: "001")
+        log("action reply ends with: \(PKEProtocol.ackTail(ack))")
         let expectedState: Bool? = action == .lock ? true : (action == .unlock ? false : nil)
         let attempts = expectedState == nil ? 1 : 6
         for attempt in 0..<attempts {
