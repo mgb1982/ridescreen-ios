@@ -41,7 +41,7 @@ struct MirrorTestEntryCard: View {
 /// Field test: 1) read the dash QR, 2) join its Wi‑Fi, 3) check EasyConn and the callback, 4) try capture.
 struct MirrorTestScreen: View {
     @StateObject private var tester = MirrorLinkTester()
-    @StateObject private var imageTest = DashImageTest()
+    @ObservedObject private var imageTest = DashImageTest.shared
     @EnvironmentObject private var trips: TripRecordingViewModel
     /// The dash QR (Wi‑Fi name and password) and the dash address are kept on this phone.
     @AppStorage("dash.qr") private var savedQR = ""
@@ -338,6 +338,9 @@ struct QRScannerView: UIViewControllerRepresentable {
 private struct DashDestinationPicker: View {
     @ObservedObject var navigator: DashNavigator
     @State private var query = ""
+    @State private var places = DashPlaces.all
+    @State private var renaming: DashPlace?
+    @State private var newName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -389,7 +392,46 @@ private struct DashDestinationPicker: View {
                     }
                     .buttonStyle(.plain)
                 }
+                if navigator.results.isEmpty && !places.isEmpty {
+                    Text("dash.nav.saved").font(RideFont.semiBold(12)).foregroundStyle(RideBrand.secondary)
+                    ForEach(places.sorted { $0.favourite && !$1.favourite }) { place in
+                        HStack(spacing: 8) {
+                            Button { navigator.setDestination(place.mapItem); places = DashPlaces.all } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(verbatim: place.name).font(RideFont.semiBold(14)).foregroundStyle(RideBrand.text)
+                                    if !place.address.isEmpty {
+                                        Text(verbatim: place.address).font(RideFont.regular(12)).foregroundStyle(RideBrand.secondary).lineLimit(1)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            Button { DashPlaces.toggleFavourite(place.id); places = DashPlaces.all } label: {
+                                Image(systemName: place.favourite ? "star.fill" : "star")
+                                    .foregroundStyle(place.favourite ? RideBrand.gold : RideBrand.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(8)
+                        .background(RideBrand.background, in: RoundedRectangle(cornerRadius: 8))
+                        .contextMenu {
+                            Button { newName = place.name; renaming = place } label: { Label("dash.nav.rename", systemImage: "pencil") }
+                            Button(role: .destructive) { DashPlaces.remove(place.id); places = DashPlaces.all } label: {
+                                Label("dash.nav.delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                    Text("dash.nav.siriHint").font(RideFont.regular(11)).foregroundStyle(RideBrand.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+        }
+        .onAppear { places = DashPlaces.all }
+        .onChange(of: navigator.destinationName) { _ in places = DashPlaces.all }
+        .alert("dash.nav.rename", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("dash.nav.renamePlaceholder", text: $newName)
+            Button("pke.save") { if let r = renaming { DashPlaces.rename(r.id, to: newName); places = DashPlaces.all }; renaming = nil }
+            Button("pke.cancel", role: .cancel) { renaming = nil }
         }
     }
 }

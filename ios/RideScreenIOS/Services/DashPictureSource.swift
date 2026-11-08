@@ -257,9 +257,8 @@ final class DashPictureSource: DashFrameSource {
         let state = appState, map = mapState
         lock.unlock()
         let now = Date()
-        // Speed straight from the latest fix (no 1 s UI timer in between); "—" when GPS is lost.
-        let fresh = map.fix != nil && now.timeIntervalSince(map.fixTime) < 5
-        let speed: Double? = fresh ? map.speed * 3.6 : nil
+        // Speed from the latest fix pushed forward by its acceleration; "—" when GPS is lost.
+        let speed = map.speedKmh(at: now)
         // Ease towards the extrapolated position and heading instead of jumping on every fix.
         if let target = map.position(at: now) {
             if let shown = shownRider, shown.distance(to: target) < 150 {
@@ -382,7 +381,8 @@ enum DashPicture {
                 options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
                 attributes: [.font: font, .foregroundColor: UIColor.white, .paragraphStyle: style], context: nil)
             if !arrived {
-                text("Meta \(formatDistance(nav.remaining))", 515, 214, 18, muted)
+                let eta = nav.arrival.map { " · " + DateFormatter.localizedString(from: $0, dateStyle: .none, timeStyle: .short) } ?? ""
+                text("Meta \(formatDistance(nav.remaining))\(eta)", 515, 214, 18, muted)
             }
             // Speed and clock: left of x≈676 below y≈284 (the dash strip covers the right corner).
             let w = text(speedText, 515, 236, 56, .white, bold: true).width / s

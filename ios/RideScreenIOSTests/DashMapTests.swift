@@ -90,4 +90,18 @@ final class MirrorQRRawTests: XCTestCase {
         let qr = MirrorQR(ssid: "ZT test & co", password: "p+w=d", modelID: "703")
         XCTAssertEqual(MirrorQR.parse(qr.raw), qr)
     }
+
+    func testSpeedIsPushedAheadByAcceleration() {
+        var state = DashMapState()
+        let now = Date()
+        state.fix = MKMapPoint(CLLocationCoordinate2D(latitude: 41.37, longitude: 2.14))
+        state.fixTime = now.addingTimeInterval(-1)
+        state.speed = 10
+        state.accel = 2
+        XCTAssertEqual(state.speedKmh(at: now)!, 43.2, accuracy: 0.01)          // (10 + 2×1) × 3.6
+        XCTAssertEqual(state.speedKmh(at: now.addingTimeInterval(2))!, 46.8, accuracy: 0.01) // capped at 1.5 s
+        state.accel = -20
+        XCTAssertEqual(state.speedKmh(at: now)!, 0)                               // never negative
+        XCTAssertNil(state.speedKmh(at: now.addingTimeInterval(5)))               // stale fix
+    }
 }

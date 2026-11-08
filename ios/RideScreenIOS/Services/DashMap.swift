@@ -13,6 +13,9 @@ struct DashMapState {
     var fix: MKMapPoint?
     var fixTime = Date.distantPast
     var speed: Double = 0          // m/s
+    /// Change of speed between the last two fixes (m/s², clamped); used to show the speed about a
+    /// second ahead of iOS's filtered value.
+    var accel: Double = 0
     var heading: Double = 0        // degrees, 0 = north
     /// Metres across the visible map (zoom follows speed).
     var viewMeters: Double = 600
@@ -41,6 +44,8 @@ struct DashNavInfo: Equatable {
     var turn: DashTurn
     var remaining: Double      // metres to the destination
     var destination: String
+    /// Estimated arrival, from Apple's travel time scaled to the distance left.
+    var arrival: Date? = nil
 }
 
 enum DashTurn: Equatable {
@@ -173,4 +178,85 @@ struct DashNavProgress {
         closest = min(closest, d)
         return maneuvers[index]
     }
+}
+
+
+extension DashMapState {
+    /// Speed to show now: the last fix's speed pushed forward by the measured acceleration for up to
+    /// 1.5 s, which hides most of the lag of iOS's filtered speed. Nil when the fix is stale.
+    func speedKmh(at now: Date) -> Double? {
+        guard fix != nil else { return nil }
+        let age = now.timeIntervalSince(fixTime)
+        guard age < 5 else { return nil }
+        let ahead = min(max(age, 0), 1.5)
+        return max(0, speed + accel * ahead) * 3.6
+    }
+}
+
+/// Destinations used before (most recent first) and the ones starred as favourites, kept on this
+/// phone. Favourites are also offered to Siri and Shortcuts ("Llévame a Casa con RideScreen").
+struct DashPlace: Codable, Equatable, Identifiable {
+    var name: String
+    var address: String
+    var latitude: Double
+    var longitude: Double
+    var favourite = false
+    var id: String { String(format: "%.5f,%.5f", latitude, longitude) }
+
+    var mapItem: MKMapItem {
+        let item = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)))
+        item.name = name
+        return item
+    }
+}
+
+enum DashPlaces {
+    private static let key = "dash.places"
+    private static let maxRecent = 8
+
+    static var all: [DashPlace] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: key),
+                  let list = try? JSONDecoder().decode([DashPlace].self, from: data) else { return [] }
+            return list
+        }
+        set {
+            UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: key)
+            RideScreenShortcuts.updateAppShortcutParameters()   // Siri learns the new names
+        }
+    }
+    static var favourites: [DashPlace] { all.filter(\.favourite) }
+
+    /// Moves the place to the top; keeps every favourite and the latest non-favourites.
+    static func remember(_ item: MKMapItem) {
+        let c = item.placemark.coordinate
+        guard CLLocationCoordinate2DIsValid(c) else { return }
+        var place = DashPlace(name: item.name ?? "Destino", address: item.placemark.title ?? "",
+                              latitude: c.latitude, longitude: c.longitude)
+        var list = all
+        if let old = list.first(where: { $0.id == place.id }) { place.favourite = old.favourite; if place.address.isEmpty { place.address = old.address } }
+        list.removeAll { $0.id == place.id }
+        list.insert(place, at: 0)
+        var recent = 0
+        list = list.filter { $0.favourite || { recent += 1; return recent <= maxRecent }() }
+        all = list
+    }
+
+    static func toggleFavourite(_ id: String) {
+        var list = all
+        guard let i = list.firstIndex(where: { $0.id == id }) else { return }
+        list[i].favourite.toggle()
+        all = list
+    }
+
+    static func rename(_ id: String, to name: String) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        var list = all
+        guard let i = list.firstIndex(where: { $0.id == id }) else { return }
+        list[i].name = clean
+        all = list
+    }
+
+    static func remove(_ id: String) { all = all.filter { $0.id != id } }
 }

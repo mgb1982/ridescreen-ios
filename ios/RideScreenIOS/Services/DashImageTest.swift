@@ -15,6 +15,8 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     @Published private(set) var framesSent = 0
     /// Moving map and destination/route; lives across test runs so a destination survives a restart.
     let navigator: DashNavigator
+    /// One per app, so Siri can set a destination before the dash screen opens.
+    static let shared = DashImageTest()
 
     private var link: DashLink?
     private var source: DashPictureSource?

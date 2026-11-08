@@ -358,7 +358,7 @@ private struct PKEEntryCard: View {
 
 private struct PKEControlsCard: View {
     @ObservedObject var location: TripLocationService
-    @StateObject private var pke = PKEControlService()
+    @ObservedObject private var pke = PKEControlService.shared
     @State private var showSetup = false
     @State private var showAccessoryConfirmation = false
     @State private var pendingAccessory: PKEAction = .seat

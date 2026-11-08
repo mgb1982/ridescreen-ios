@@ -35,21 +35,128 @@ final class DashNavigator: ObservableObject {
     private var offRouteFixes = 0
     private var lastRouteAt = Date.distantPast
     private var routing = false
+    private var routeDistance = 0.0
+    private var routeTime = 0.0
+    /// Map tiles fetched ahead of time (iOS gives no new map with the phone locked): along the route,
+    /// and a block around the rider when there is none. Kept JPEG-compressed, decoded when used.
+    private var cache: [(rect: MKMapRect, view: Double, jpeg: Data)] = []
+    private var precaching = false
+    private var precachedRoute = false
+    private var ringCenter: MKMapPoint?
+    private var cacheRect = MKMapRect.null
+    private static let cacheView = 700.0
+    private static let cacheLimit = 90
 
     // MARK: Location
 
     func update(location: CLLocation) {
         let point = MKMapPoint(location.coordinate)
         let speed = max(0, location.speed)
+        if location.speed >= 0, state.fix != nil {
+            let dt = location.timestamp.timeIntervalSince(state.fixTime)
+            if dt > 0.3 && dt < 3 { state.accel = min(max((speed - state.speed) / dt, -4), 4) } else { state.accel = 0 }
+        } else {
+            state.accel = 0
+        }
         if location.course >= 0 && speed > 1.5 { state.heading = location.course }
         state.fix = point
         if !hasFix { hasFix = true }
         state.fixTime = location.timestamp
         state.speed = speed
         state.viewMeters = DashGeo.viewMeters(speedKmh: speed * 3.6)
-        if needsSnapshot(at: point) { snapshot(around: point) }
+        if locked {
+            useCache(at: point)
+        } else if needsSnapshot(at: point) {
+            snapshot(around: point)
+        }
+        if destination != nil && state.route.isEmpty && !routing && Date().timeIntervalSince(lastRouteAt) > 10 {
+            calculateRoute(reason: "destino pendiente")
+        }
+        precacheIfNeeded(at: point)
         updateNavigation(at: point)
         onStateChange?(state)
+    }
+
+    private var locked: Bool { !UIApplication.shared.isProtectedDataAvailable }
+
+    // MARK: Map cache (for the locked phone and for places without coverage)
+
+    /// Swap in the cached tile that best centres the rider, when the current map no longer does.
+    private func useCache(at p: MKMapPoint) {
+        let r = state.imageRect
+        if !r.isNull, state.image != nil, hypot(p.x - r.midX, p.y - r.midY) < r.width * 0.25 { return }
+        guard let best = cache.min(by: { hypot(p.x - $0.rect.midX, p.y - $0.rect.midY) < hypot(p.x - $1.rect.midX, p.y - $1.rect.midY) }),
+              hypot(p.x - best.rect.midX, p.y - best.rect.midY) < best.rect.width * 0.4 else {
+            if state.note != "sin mapa" { state.note = "sin mapa"; log("Sin mapa guardado para esta zona") }
+            return
+        }
+        if best.rect == state.imageRect { return }
+        guard let image = UIImage(data: best.jpeg)?.cgImage else { return }
+        state.image = image
+        state.imageRect = best.rect
+        snapshotViewMeters = best.view
+        state.note = ""
+    }
+
+    /// While the phone is unlocked, fetch tiles along the route (once per route) or, without a route,
+    /// a 3×3 block around the rider (again when the rider leaves it).
+    private func precacheIfNeeded(at p: MKMapPoint) {
+        guard !locked, !precaching else { return }
+        let ppm = MKMapPointsPerMeterAtLatitude(p.coordinate.latitude)
+        let side = Self.cacheView * 2.6 * ppm
+        var centres: [MKMapPoint] = []
+        if !state.route.isEmpty {
+            guard !precachedRoute else { return }
+            precachedRoute = true
+            let step = side * 0.4
+            var last: MKMapPoint?
+            for q in state.route {
+                if let l = last, hypot(q.x - l.x, q.y - l.y) < step { continue }
+                centres.append(q); last = q
+            }
+            if let end = state.route.last, let l = last, hypot(end.x - l.x, end.y - l.y) > step * 0.3 { centres.append(end) }
+        } else {
+            if let c = ringCenter, hypot(p.x - c.x, p.y - c.y) < side * 0.8 { return }
+            ringCenter = p
+            for dy in -1...1 { for dx in -1...1 { centres.append(MKMapPoint(x: p.x + Double(dx) * side * 0.8, y: p.y + Double(dy) * side * 0.8)) } }
+        }
+        centres = centres.filter { c in !cache.contains { hypot(c.x - $0.rect.midX, c.y - $0.rect.midY) < side * 0.2 } }
+        guard !centres.isEmpty else { return }
+        precaching = true
+        let started = Date()
+        let total = centres.count
+        Task { @MainActor [weak self] in
+            var done = 0
+            for c in centres {
+                guard let self else { return }
+                let rect = MKMapRect(x: c.x - side / 2, y: c.y - side / 2, width: side, height: side)
+                if let jpeg = await Self.tile(rect: rect) {
+                    self.cache.append((rect, Self.cacheView, jpeg)); done += 1
+                    if self.cache.count > Self.cacheLimit { self.cache.removeFirst(self.cache.count - Self.cacheLimit) }
+                }
+                if self.locked { break }
+            }
+            guard let self else { return }
+            self.precaching = false
+            let kb = self.cache.reduce(0) { $0 + $1.jpeg.count } / 1024
+            self.log("Mapa guardado para usar bloqueado: \(done)/\(total) zonas en \(Int(Date().timeIntervalSince(started))) s · \(self.cache.count) en total, \(kb) KB")
+        }
+    }
+
+    private static func tile(rect: MKMapRect) async -> Data? {
+        let options = MKMapSnapshotter.Options()
+        options.mapRect = rect
+        options.size = CGSize(width: 1000, height: 1000)
+        options.scale = 1
+        options.traitCollection = UITraitCollection(userInterfaceStyle: .dark)
+        options.pointOfInterestFilter = .excludingAll
+        options.showsBuildings = false
+        let snapshotter = MKMapSnapshotter(options: options)
+        return await withCheckedContinuation { (c: CheckedContinuation<Data?, Never>) in
+            snapshotter.start(with: .global(qos: .utility)) { snap, _ in
+                c.resume(returning: snap?.image.jpegData(compressionQuality: 0.7))
+            }
+        }
     }
 
     private func needsSnapshot(at p: MKMapPoint) -> Bool {
@@ -125,6 +232,7 @@ final class DashNavigator: ObservableObject {
         snapshotFailures += 1
         retryAfter = Date().addingTimeInterval(5)
         state.note = "sin mapa"
+        if let fix = state.fix { useCache(at: fix) }
         if snapshotFailures == 1 || snapshotFailures % 10 == 0 {
             log("!! Mapa falló (\(appState), intento \(snapshotFailures)): \(reason) · reintento en 5 s")
         }
@@ -158,6 +266,7 @@ final class DashNavigator: ObservableObject {
         destination = item
         destinationName = item.name ?? "Destino"
         results = []
+        DashPlaces.remember(item)
         calculateRoute(reason: "destino")
     }
 
@@ -203,6 +312,9 @@ final class DashNavigator: ObservableObject {
                     return
                 }
                 self.state.route = points
+                self.routeDistance = distance
+                self.routeTime = time
+                self.precachedRoute = false
                 self.maneuvers = DashManeuver.from(steps: steps)
                 self.progress = DashNavProgress()
                 self.offRouteFixes = 0
@@ -226,8 +338,10 @@ final class DashNavigator: ObservableObject {
             return
         }
         let d = p.distance(to: next.point)
+        let remaining = d + next.remainingAfter
+        let arrival = routeDistance > 0 ? Date().addingTimeInterval(routeTime * min(remaining / routeDistance, 1.5)) : nil
         state.nav = DashNavInfo(instruction: next.instruction, distance: d, turn: next.turn,
-                                remaining: d + next.remainingAfter, destination: destinationName ?? "")
+                                remaining: remaining, destination: destinationName ?? "", arrival: arrival)
         // Off the route for three fixes in a row → ask Apple again (at most every 15 s).
         if DashGeo.distance(from: p, to: state.route) > 70 {
             offRouteFixes += 1
