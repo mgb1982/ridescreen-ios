@@ -24,7 +24,7 @@ final class TripProcessorTests: XCTestCase {
         XCTAssertEqual(long?.map { String(format: "%02X", $0) }.joined(), "9EFCDBFC16462E8F7A74317E21405559")
         XCTAssertEqual(
             String(data: PKEProtocol.actionFrame(code: "12345678", action: .unlock, cipher: cipher!), encoding: .utf8),
-            "*BT,12345678,10,001,2,64cc87ec467f68388b397f9041a30202#"
+            "*BT,12345678,10,001,2,64CC87EC467F68388B397F9041A30202#"
         )
     }
 

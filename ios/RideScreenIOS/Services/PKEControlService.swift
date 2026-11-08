@@ -61,8 +61,7 @@ enum PKEProtocol {
         return aes(key: Data(session), block: Data(block))
     }
     static func actionFrame(code: String, action: PKEAction, cipher: Data) -> Data {
-        // Lowercase hex, exactly as the Android app sends it (confirmed working on the bike).
-        frame(code: code, command: "001,\(action.rawValue),\(cipher.map { String(format: "%02x", $0) }.joined())")
+        frame(code: code, command: "001,\(action.rawValue),\(cipher.map { String(format: "%02X", $0) }.joined())")
     }
     /** Last field of a reply (the box's result flag), safe to log: no code, no cipher. */
     static func ackTail(_ reply: String) -> String {
