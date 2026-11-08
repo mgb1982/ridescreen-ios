@@ -37,15 +37,17 @@ final class DashNavigator: ObservableObject {
     private var routing = false
     private var routeDistance = 0.0
     private var routeTime = 0.0
-    /// Map tiles fetched ahead of time (iOS gives no new map with the phone locked): along the route,
-    /// and a block around the rider when there is none. Kept JPEG-compressed, decoded when used.
-    private var cache: [(rect: MKMapRect, view: Double, jpeg: Data)] = []
+    /// Map tiles fetched ahead of time (iOS gives no new map with the phone locked), kept on disk so
+    /// they add up ride after ride. See [DashTileStore].
+    let tiles = DashTileStore()
     private var precaching = false
     private var precachedRoute = false
     private var ringCenter: MKMapPoint?
-    private var cacheRect = MKMapRect.null
-    private static let cacheView = 700.0
-    private static let cacheLimit = 90
+    @Published private(set) var areaProgress: String?
+    private var areaTask: Task<Void, Never>?
+    /// Detail zoom (city) and wide zoom (around it, and highway).
+    static let detailView = 700.0
+    static let wideView = 1600.0
 
     // MARK: Location
 
@@ -81,66 +83,100 @@ final class DashNavigator: ObservableObject {
 
     // MARK: Map cache (for the locked phone and for places without coverage)
 
-    /// Swap in the cached tile that best centres the rider, when the current map no longer does.
+    /// Swap in the stored tile that best covers the rider (detail first, then wide), when the current
+    /// map no longer does.
     private func useCache(at p: MKMapPoint) {
         let r = state.imageRect
         if !r.isNull, state.image != nil, hypot(p.x - r.midX, p.y - r.midY) < r.width * 0.25 { return }
-        guard let best = cache.min(by: { hypot(p.x - $0.rect.midX, p.y - $0.rect.midY) < hypot(p.x - $1.rect.midX, p.y - $1.rect.midY) }),
-              hypot(p.x - best.rect.midX, p.y - best.rect.midY) < best.rect.width * 0.4 else {
+        guard let best = tiles.best(for: p) else {
             if state.note != "sin mapa" { state.note = "sin mapa"; log("Sin mapa guardado para esta zona") }
             return
         }
         if MKMapRectEqualToRect(best.rect, state.imageRect) { return }
-        guard let image = UIImage(data: best.jpeg)?.cgImage else { return }
+        guard let image = tiles.image(best) else { return }
         state.image = image
         state.imageRect = best.rect
         snapshotViewMeters = best.view
         state.note = ""
     }
 
-    /// While the phone is unlocked, fetch tiles along the route (once per route) or, without a route,
-    /// a 3×3 block around the rider (again when the rider leaves it).
+    /// While the phone is unlocked: tiles along the route (once per route, both zooms), or without a
+    /// route a detailed 3×3 block around the rider plus a wide 5×5 ring (~20 km), again when the rider
+    /// leaves it. Tiles already on disk are skipped.
     private func precacheIfNeeded(at p: MKMapPoint) {
-        guard !locked, !precaching else { return }
+        guard !locked, !precaching, areaTask == nil else { return }
         let ppm = MKMapPointsPerMeterAtLatitude(p.coordinate.latitude)
-        let side = Self.cacheView * 2.6 * ppm
-        var centres: [MKMapPoint] = []
+        let detail = Self.detailView * 2.6 * ppm, wide = Self.wideView * 2.6 * ppm
+        var jobs: [(MKMapPoint, Double)] = []
         if !state.route.isEmpty {
             guard !precachedRoute else { return }
             precachedRoute = true
-            let step = side * 0.4
-            var last: MKMapPoint?
-            for q in state.route {
-                if let l = last, hypot(q.x - l.x, q.y - l.y) < step { continue }
-                centres.append(q); last = q
-            }
-            if let end = state.route.last, let l = last, hypot(end.x - l.x, end.y - l.y) > step * 0.3 { centres.append(end) }
+            jobs = Self.along(state.route, step: detail * 0.4).map { ($0, Self.detailView) }
+                 + Self.along(state.route, step: wide * 0.4).map { ($0, Self.wideView) }
         } else {
-            if let c = ringCenter, hypot(p.x - c.x, p.y - c.y) < side * 0.8 { return }
+            if let c = ringCenter, hypot(p.x - c.x, p.y - c.y) < detail * 0.8 { return }
             ringCenter = p
-            for dy in -1...1 { for dx in -1...1 { centres.append(MKMapPoint(x: p.x + Double(dx) * side * 0.8, y: p.y + Double(dy) * side * 0.8)) } }
+            jobs = Self.grid(around: p, half: 1, step: detail * 0.8).map { ($0, Self.detailView) }
+                 + Self.grid(around: p, half: 2, step: wide * 0.8).map { ($0, Self.wideView) }
         }
-        centres = centres.filter { c in !cache.contains { hypot(c.x - $0.rect.midX, c.y - $0.rect.midY) < side * 0.2 } }
-        guard !centres.isEmpty else { return }
+        runJobs(jobs, label: "Mapa guardado para usar bloqueado", stopWhenLocked: true)
+    }
+
+    /// "Guardar mapa de esta zona": a square of the given radius, at a zoom that keeps it to a few
+    /// hundred tiles. Meant for home Wi‑Fi before a trip out of the usual area.
+    func downloadArea(radiusKm: Double) {
+        guard let p = state.fix, areaTask == nil else { return }
+        let view = radiusKm <= 10 ? Self.wideView : (radiusKm <= 25 ? 2600.0 : 4000.0)
+        let ppm = MKMapPointsPerMeterAtLatitude(p.coordinate.latitude)
+        let step = view * 2.6 * ppm * 0.8
+        let half = Int((radiusKm * 1000 * ppm / step).rounded(.up))
+        let jobs = Self.grid(around: p, half: half, step: step).map { ($0, view) }
+        log("Guardando mapa de \(Int(radiusKm)) km alrededor: \(jobs.count) zonas")
+        runJobs(jobs, label: "Mapa de la zona guardado", stopWhenLocked: false, manual: true)
+    }
+
+    func cancelAreaDownload() { areaTask?.cancel() }
+
+    private func runJobs(_ jobs: [(MKMapPoint, Double)], label: String, stopWhenLocked: Bool, manual: Bool = false) {
+        let todo = jobs.filter { !tiles.has(centre: $0.0, view: $0.1) }
+        guard !todo.isEmpty else { return }
         precaching = true
         let started = Date()
-        let total = centres.count
-        Task { @MainActor [weak self] in
+        let task = Task { @MainActor [weak self] in
             var done = 0
-            for c in centres {
-                guard let self else { return }
+            for (i, (c, view)) in todo.enumerated() {
+                guard let self, !Task.isCancelled else { break }
+                if stopWhenLocked && self.locked { break }
+                let ppm = MKMapPointsPerMeterAtLatitude(c.coordinate.latitude)
+                let side = view * 2.6 * ppm
                 let rect = MKMapRect(x: c.x - side / 2, y: c.y - side / 2, width: side, height: side)
-                if let jpeg = await Self.tile(rect: rect) {
-                    self.cache.append((rect, Self.cacheView, jpeg)); done += 1
-                    if self.cache.count > Self.cacheLimit { self.cache.removeFirst(self.cache.count - Self.cacheLimit) }
-                }
-                if self.locked { break }
+                if let jpeg = await Self.tile(rect: rect) { self.tiles.add(rect: rect, view: view, jpeg: jpeg); done += 1 }
+                if manual { self.areaProgress = "\(i + 1)/\(todo.count)" }
             }
             guard let self else { return }
             self.precaching = false
-            let kb = self.cache.reduce(0) { $0 + $1.jpeg.count } / 1024
-            self.log("Mapa guardado para usar bloqueado: \(done)/\(total) zonas en \(Int(Date().timeIntervalSince(started))) s · \(self.cache.count) en total, \(kb) KB")
+            if manual { self.areaTask = nil; self.areaProgress = nil }
+            self.log("\(label): \(done)/\(todo.count) zonas en \(Int(Date().timeIntervalSince(started))) s · \(self.tiles.summary)")
         }
+        if manual { areaTask = task }
+    }
+
+    private static func along(_ route: [MKMapPoint], step: Double) -> [MKMapPoint] {
+        var out: [MKMapPoint] = []
+        var last: MKMapPoint?
+        for q in route {
+            if let l = last, hypot(q.x - l.x, q.y - l.y) < step { continue }
+            out.append(q); last = q
+        }
+        if let end = route.last, let l = last, hypot(end.x - l.x, end.y - l.y) > step * 0.3 { out.append(end) }
+        return out
+    }
+
+    private static func grid(around p: MKMapPoint, half: Int, step: Double) -> [MKMapPoint] {
+        var out: [MKMapPoint] = []
+        for dy in -half...half { for dx in -half...half { out.append(MKMapPoint(x: p.x + Double(dx) * step, y: p.y + Double(dy) * step)) } }
+        // Nearest first, so a cancelled or interrupted download still covers the middle.
+        return out.sorted { hypot($0.x - p.x, $0.y - p.y) < hypot($1.x - p.x, $1.y - p.y) }
     }
 
     private static func tile(rect: MKMapRect) async -> Data? {
@@ -352,5 +388,68 @@ final class DashNavigator: ObservableObject {
         } else {
             offRouteFixes = 0
         }
+    }
+}
+
+/// Map tiles on disk (Caches/dash-map), named by zoom and map rect, so they survive app restarts and
+/// add up ride after ride. Oldest are removed past [limitBytes]. iOS may clear Caches when storage is
+/// short; then they are simply fetched again.
+final class DashTileStore {
+    struct Tile { let rect: MKMapRect; let view: Double; let url: URL; var size: Int; var date: Date }
+    static let limitBytes = 200 * 1024 * 1024
+    private(set) var items: [Tile] = []
+    private let dir: URL
+
+    init() {
+        dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("dash-map")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
+        let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: keys)) ?? []
+        for url in files {
+            let p = url.deletingPathExtension().lastPathComponent.split(separator: "_").compactMap { Double($0) }
+            guard p.count == 4, let v = try? url.resourceValues(forKeys: Set(keys)) else { continue }
+            items.append(Tile(rect: MKMapRect(x: p[1], y: p[2], width: p[3], height: p[3]), view: p[0], url: url,
+                              size: v.fileSize ?? 0, date: v.contentModificationDate ?? .distantPast))
+        }
+    }
+
+    var bytes: Int { items.reduce(0) { $0 + $1.size } }
+    var summary: String { "\(items.count) zonas en el móvil, \(bytes / 1_048_576) MB" }
+
+    func has(centre c: MKMapPoint, view: Double) -> Bool {
+        items.contains { $0.view == view && hypot(c.x - $0.rect.midX, c.y - $0.rect.midY) < $0.rect.width * 0.2 }
+    }
+
+    func best(for p: MKMapPoint) -> Tile? {
+        func off(_ t: Tile) -> Double { hypot(p.x - t.rect.midX, p.y - t.rect.midY) / t.rect.width }
+        let fitting = items.filter { off($0) < 0.4 }
+        // Sharpest zoom that covers the rider; among equals, the best centred.
+        return fitting.min { ($0.view, off($0)) < ($1.view, off($1)) }
+    }
+
+    func image(_ t: Tile) -> CGImage? {
+        try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: t.url.path)
+        guard let data = try? Data(contentsOf: t.url) else { return nil }
+        return UIImage(data: data)?.cgImage
+    }
+
+    func add(rect: MKMapRect, view: Double, jpeg: Data) {
+        let name = String(format: "%.0f_%.1f_%.1f_%.1f.jpg", view, rect.minX, rect.minY, rect.width)
+        let url = dir.appendingPathComponent(name)
+        guard (try? jpeg.write(to: url)) != nil else { return }
+        items.append(Tile(rect: rect, view: view, url: url, size: jpeg.count, date: Date()))
+        var total = bytes
+        guard total > Self.limitBytes else { return }
+        items.sort { $0.date < $1.date }
+        while total > Self.limitBytes, let old = items.first {
+            try? FileManager.default.removeItem(at: old.url)
+            total -= old.size
+            items.removeFirst()
+        }
+    }
+
+    func clear() {
+        for t in items { try? FileManager.default.removeItem(at: t.url) }
+        items = []
     }
 }

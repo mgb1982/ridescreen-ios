@@ -341,6 +341,7 @@ private struct DashDestinationPicker: View {
     @State private var places = DashPlaces.all
     @State private var renaming: DashPlace?
     @State private var newName = ""
+    @State private var tilesInfo = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -425,8 +426,28 @@ private struct DashDestinationPicker: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            HStack(spacing: 10) {
+                if let progress = navigator.areaProgress {
+                    ProgressView().controlSize(.small)
+                    Text(verbatim: progress).font(RideFont.medium(12)).foregroundStyle(RideBrand.secondary)
+                    Button("pke.cancel") { navigator.cancelAreaDownload() }.font(RideFont.medium(12))
+                } else {
+                    Menu {
+                        ForEach([10, 25, 50], id: \.self) { km in
+                            Button("\(km) km") { navigator.downloadArea(radiusKm: Double(km)) }
+                        }
+                        Button("dash.map.clear", role: .destructive) { navigator.tiles.clear(); tilesInfo = navigator.tiles.summary }
+                    } label: {
+                        Label("dash.map.download", systemImage: "square.and.arrow.down.on.square")
+                    }
+                    .font(RideFont.medium(13))
+                    .disabled(!navigator.hasFix)
+                    Text(verbatim: tilesInfo).font(RideFont.regular(11)).foregroundStyle(RideBrand.secondary)
+                }
+            }
         }
-        .onAppear { places = DashPlaces.all }
+        .onAppear { places = DashPlaces.all; tilesInfo = navigator.tiles.summary }
+        .onChange(of: navigator.areaProgress) { _ in tilesInfo = navigator.tiles.summary }
         .onChange(of: navigator.destinationName) { _ in places = DashPlaces.all }
         .alert("dash.nav.rename", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("dash.nav.renamePlaceholder", text: $newName)

@@ -3911,6 +3911,52 @@
         }
       }
     },
+    "dash.map.download": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar mapa de esta zona"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desa el mapa d'aquesta zona"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save map of this area"
+          }
+        }
+      }
+    },
+    "dash.map.clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar mapas guardados"
+          }
+        },
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esborra els mapes desats"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete saved maps"
+          }
+        }
+      }
+    },
     "dash.nav.clear": {
       "extractionState": "manual",
       "localizations": {
