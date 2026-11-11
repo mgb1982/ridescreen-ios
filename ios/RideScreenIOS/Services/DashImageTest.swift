@@ -30,7 +30,11 @@ final class DashImageTest: NSObject, ObservableObject, CLLocationManagerDelegate
     override init() {
         super.init()
         location.delegate = self
-        location.desiredAccuracy = kCLLocationAccuracyBest
+        // Here location mostly keeps the app alive with the phone locked; it also feeds the speed on the
+        // picture and a 900 m map snapshot every 10 s. Ten-metre accuracy is plenty for both and lets
+        // iOS spend less on the GNSS than "best" (audit 11 Nov 2026). No distance filter: the speed must
+        // keep updating while stopped.
+        location.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         location.distanceFilter = kCLDistanceFilterNone
         location.pausesLocationUpdatesAutomatically = false
         location.activityType = .automotiveNavigation

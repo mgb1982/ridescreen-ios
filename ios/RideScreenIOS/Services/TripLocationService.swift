@@ -27,6 +27,10 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
         manager.distanceFilter = kCLDistanceFilterNone
     }
 
+    /// While a trip records, a fix every 5 m is enough for the route and the distance (audit 11 Nov 2026):
+    /// with no filter Core Location delivers every fix, about one a second, also when standing still.
+    static let tripDistanceFilter: CLLocationDistance = 5
+
     var servicesEnabled: Bool {
         CLLocationManager.locationServicesEnabled()
     }
@@ -46,10 +50,12 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
         manager.pausesLocationUpdatesAutomatically = false
         manager.allowsBackgroundLocationUpdates = canRunInBackground
         manager.showsBackgroundLocationIndicator = canRunInBackground
+        manager.distanceFilter = Self.tripDistanceFilter
         manager.startUpdatingLocation()
     }
 
     func stopUpdating() {
+        manager.distanceFilter = kCLDistanceFilterNone   // safety monitoring wants every fix again
         if !safetyMonitoring { manager.stopUpdatingLocation() }
         manager.allowsBackgroundLocationUpdates = false
         manager.showsBackgroundLocationIndicator = false
