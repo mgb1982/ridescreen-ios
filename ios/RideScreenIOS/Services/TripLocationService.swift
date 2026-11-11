@@ -86,11 +86,14 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
         // and blocked the lock. No new fix after a fix that was itself at a standstill means the bike moved
         // under 5 m since, so it is still stopped. A fix taken while moving followed by silence (tunnel,
         // lost signal) stays unknown.
-        if manager.distanceFilter >= Self.tripDistanceFilter, age <= 120, kmh <= Self.standstillKmh { return kmh }
+        if manager.distanceFilter >= Self.tripDistanceFilter, age <= Self.standstillTrustSeconds, kmh <= Self.standstillKmh { return kmh }
         return nil
     }
 
     static let standstillKmh: Double = 3
+    /// How long a standstill fix keeps counting as "stopped" without new fixes (review of 11 Nov: 120 s was
+    /// too long if the signal drops right as the bike stops and it then rides off).
+    static let standstillTrustSeconds: TimeInterval = 25
 
     func restorePreviousPoint(_ point: TripPoint?) {
         guard let point else {
