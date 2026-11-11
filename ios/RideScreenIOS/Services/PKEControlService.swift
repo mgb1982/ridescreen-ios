@@ -3,6 +3,7 @@ import CoreBluetooth
 import CommonCrypto
 import Foundation
 import Security
+import UIKit
 
 enum PKEAction: String, CaseIterable, Identifiable {
     case lock = "1", unlock = "2", fuel = "5", seat = "6"
@@ -192,6 +193,21 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
         }
         guard central.state == .poweredOn else { throw PKEError.bluetoothOff }
         unmatchedPeripheralCount = 0
+        // With the phone locked or the app in the background iOS delivers no scan results at all when
+        // the scan has no service filter, and this box does not advertise its UART UUID. So the box is
+        // remembered by its iOS identifier the first time it is seen and, from then on, connected
+        // directly (no scan), which does work in the background.
+        if let known = knownPeripheral(for: code) {
+            log("known PKE box; connecting without scanning (\(appStateName))")
+            do {
+                try await connectAndDiscover(known)
+                log("UART characteristics and notifications ready")
+                return
+            } catch {
+                log("direct connection failed (\(error.localizedDescription)); scanning instead")
+                close()
+            }
+        }
         let found = try await withCheckedThrowingContinuation { (c: CheckedContinuation<CBPeripheral, Error>) in
             scanWaiter = c
             // Some PKE boxes expose Nordic UART only after connecting and do not advertise its UUID.
@@ -200,18 +216,46 @@ final class PKEControlService: NSObject, ObservableObject, CBCentralManagerDeleg
                 try? await Task.sleep(for: .seconds(12))
                 if self.scanWaiter != nil {
                     self.central.stopScan()
-                    self.log("BLE scan timed out; unmatched advertisements observed: \(self.unmatchedPeripheralCount)")
+                    self.log("BLE scan timed out (\(self.appStateName)); unmatched advertisements observed: \(self.unmatchedPeripheralCount)")
                     self.scanWaiter?.resume(throwing: PKEError.notFound)
                     self.scanWaiter = nil
                 }
             }
         }
-        peripheral = found; found.delegate = self
+        remember(found, for: code)
         log("matching peripheral found; connecting")
-        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in connectWaiter = c; central.connect(found) }
-        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in readyWaiter = c; found.discoverServices([PKEProtocol.service]) }
+        try await connectAndDiscover(found)
         log("UART characteristics and notifications ready")
     }
+    private var appStateName: String { UIApplication.shared.applicationState == .active ? "foreground" : "background" }
+
+    private func defaultsKey(_ code: String) -> String { "pke.peripheral." + String(code.suffix(4)) }
+    private func knownPeripheral(for code: String) -> CBPeripheral? {
+        guard let text = UserDefaults.standard.string(forKey: defaultsKey(code)), let id = UUID(uuidString: text) else { return nil }
+        return central.retrievePeripherals(withIdentifiers: [id]).first
+    }
+    private func remember(_ p: CBPeripheral, for code: String) {
+        UserDefaults.standard.set(p.identifier.uuidString, forKey: defaultsKey(code))
+    }
+
+    /// Connects (giving up after 8 s: a pending connection never times out by itself) and finds the UART.
+    private func connectAndDiscover(_ p: CBPeripheral) async throws {
+        peripheral = p; p.delegate = self
+        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
+            connectWaiter = c
+            central.connect(p)
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                if self.connectWaiter != nil {
+                    self.central.cancelPeripheralConnection(p)
+                    self.connectWaiter?.resume(throwing: PKEError.timeout)
+                    self.connectWaiter = nil
+                }
+            }
+        }
+        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in readyWaiter = c; p.discoverServices([PKEProtocol.service]) }
+    }
+
     private func ask(code: String, command: String) async throws -> String {
         log("request sent: \(command); waiting for response")
         return try await exchange(PKEProtocol.frame(code: code, command: command), command: String(command.prefix(3)))
