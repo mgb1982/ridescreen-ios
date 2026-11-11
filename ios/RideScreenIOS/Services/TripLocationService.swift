@@ -27,6 +27,10 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
         manager.distanceFilter = kCLDistanceFilterNone
     }
 
+    /// While a trip records, a fix every 5 m is enough for the route and the distance (audit 11 Nov 2026):
+    /// with no filter Core Location delivers every fix, about one a second, also when standing still.
+    static let tripDistanceFilter: CLLocationDistance = 5
+
     var servicesEnabled: Bool {
         CLLocationManager.locationServicesEnabled()
     }
@@ -46,10 +50,12 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
         manager.pausesLocationUpdatesAutomatically = false
         manager.allowsBackgroundLocationUpdates = canRunInBackground
         manager.showsBackgroundLocationIndicator = canRunInBackground
+        manager.distanceFilter = Self.tripDistanceFilter
         manager.startUpdatingLocation()
     }
 
     func stopUpdating() {
+        manager.distanceFilter = kCLDistanceFilterNone   // safety monitoring wants every fix again
         if !safetyMonitoring { manager.stopUpdatingLocation() }
         manager.allowsBackgroundLocationUpdates = false
         manager.showsBackgroundLocationIndicator = false
@@ -71,11 +77,20 @@ final class TripLocationService: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func freshSpeedKmh(maxAge: TimeInterval = 10, now: Date = Date()) -> Double? {
-        guard let latestLocation, now.timeIntervalSince(latestLocation.timestamp) <= maxAge,
-              latestLocation.speed >= 0, latestLocation.horizontalAccuracy >= 0,
+        guard let latestLocation, latestLocation.speed >= 0, latestLocation.horizontalAccuracy >= 0,
               latestLocation.horizontalAccuracy <= 50 else { return nil }
-        return latestLocation.speed * 3.6
+        let age = now.timeIntervalSince(latestLocation.timestamp)
+        let kmh = latestLocation.speed * 3.6
+        if age <= maxAge { return kmh }
+        // With the 5 m trip filter a parked bike gets no new fixes, which used to read as "speed unknown"
+        // and blocked the lock. No new fix after a fix that was itself at a standstill means the bike moved
+        // under 5 m since, so it is still stopped. A fix taken while moving followed by silence (tunnel,
+        // lost signal) stays unknown.
+        if manager.distanceFilter >= Self.tripDistanceFilter, age <= 120, kmh <= Self.standstillKmh { return kmh }
+        return nil
     }
+
+    static let standstillKmh: Double = 3
 
     func restorePreviousPoint(_ point: TripPoint?) {
         guard let point else {
